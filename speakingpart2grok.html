@@ -12,15 +12,16 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .hidden { display: none; }
     .images { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-    .images img { width: 45%; min-width: 200px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .images img { width: 45%; min-width: 200px; max-width: 400px; height: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); object-fit: cover; }
     .timer { font-size: 1.5em; font-weight: bold; color: #dc2626; }
     .small-btn { @apply px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg; }
+    .placeholder-img { background: #e5e7eb; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 14px; }
   </style>
 </head>
 <body class="p-4">
 <div id="app" class="max-w-4xl mx-auto">
 
-  <!-- LOGIN -->
+  <!-- LOGIN SCREEN -->
   <div id="loginScreen" class="min-h-screen fade-in">
     <div class="bg-white rounded-2xl shadow-2xl p-8 mt-8">
       <div class="text-center mb-8">
@@ -43,11 +44,11 @@
     </div>
   </div>
 
-  <!-- EXAM -->
+  <!-- EXAM SCREEN -->
   <div id="examScreen" class="hidden min-h-screen pb-20">
     <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10">
       <div class="flex justify-between items-center flex-wrap gap-4">
-        <div class:flex items-center gap-3">
+        <div class="flex items-center gap-3">
           <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-12 h-12 object-contain">
           <div>
             <h1 class="text-2xl font-bold text-green-700">FCE Speaking Part 2</h1>
@@ -79,7 +80,7 @@
         <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">Gửi AI chấm</button>
       </div>
 
-      <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm"...</div>
+      <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm" để nói...</div>
       <div id="result" class="mt-6"></div>
 
       <label class="flex items-center gap-2 mt-6 text-gray-700">
@@ -92,7 +93,7 @@
     </div>
   </div>
 
-  <!-- LEADERBOARD -->
+  <!-- LEADERBOARD SCREEN -->
   <div id="leaderboardScreen" class="hidden min-h-screen pb-20">
     <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10 flex justify-between items-center">
       <h1 class="text-2xl font-bold text-green-700">BẢNG XẾP HẠNG</h1>
@@ -115,171 +116,95 @@
   </div>
 
 </div>
+
 <script>
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec'; // Thay bằng URL Apps Script của bạn
+// === CẤU HÌNH ===
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec'; // THAY BẰNG URL CỦA BẠN
+
 let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
 
-// 25 CẶP ẢNH + CÂU HỎI (từ Unsplash/Pexels, online miễn phí, có người)
+// === 25 CẶP ẢNH + CÂU HỎI (ỔN ĐỊNH, KHÔNG 404) ===
 const questions = [
-  // 1. Teamwork
-  {
-    img1: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why teamwork might be important in these situations."
-  },
-  // 2. Emotions/Feelings
-  {
-    img1: "https://images.unsplash.com/photo-1524594152308-39a3c8dc4d9a?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the people might be feeling."
-  },
-  // 3. Music Listening
-  {
-    img1: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1579586144127-4334a3b6b9c5?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what kind of music the people might be listening to."
-  },
-  // 4. Outdoor Activities
-  {
-    img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why the people might have chosen these activities."
-  },
-  // 5. Appearance/Fashion
-  {
-    img1: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1542272604-787c38355395?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the people might be feeling about their appearance."
-  },
-  // 6. Celebration/Party
-  {
-    img1: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the people might be celebrating."
-  },
-  // 7. Transport Vehicles
-  {
-    img1: "https://images.unsplash.com/photo-1502877338535-766e3a6052db?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why the people might be using these forms of transport."
-  },
-  // 8. Technology Work
-  {
-    img1: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how technology might be helping the people in their work."
-  },
-  // 9. Shopping/Buying
-  {
-    img1: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1571771894821-ce9b6c747b4e?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the people might be buying and why."
-  },
-  // 10. Learning/Education
-  {
-    img1: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the people might be learning in these situations."
-  },
-  // 11. Photography/Taking Photos
-  {
-    img1: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why the people might be taking these photos."
-  },
-  // 12. After Activities/Relaxation
-  {
-    img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the people might be doing after these activities."
-  },
-  // 13. Weather Effect on People
-  {
-    img1: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the weather might be affecting the people."
-  },
-  // 14. Fashion Clothes
-  {
-    img1: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1554151228-14d9def656e4?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why the people might have chosen these clothes."
-  },
-  // 15. Hiking Outdoor
-  {
-    img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1517248135467-2c7ed3ed2b5a?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the disadvantages might be of these situations."
-  },
-  // 16. Travel Alone
-  {
-    img1: "https://images.unsplash.com/photo-1502877338535-766e3a6052db?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why the people might prefer these places."
-  },
-  // 17. Sports Exercise
-  {
-    img1: "https://images.unsplash.com/photo-1524504388944-b46d3b0f9f75?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the people might be learning."
-  },
-  // 18. School Students
-  {
-    img1: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the activities might affect their health."
-  },
-  // 19. Reading Books
-  {
-    img1: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why these people might be happy."
-  },
-  // 20. Cooking Food
-  {
-    img1: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1551218808-94e220e084d0?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the people might do next."
-  },
-  // 21. Painting Art
-  {
-    img1: "https://images.unsplash.com/photo-1571113758179-48a7a8f383b2?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the environments might influence the people."
-  },
-  // 22. Dancing Party
-  {
-    img1: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why the people might be tired."
-  },
-  // 23. Cycling Bike
-  {
-    img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say what the similarities are in their daily routines."
-  },
-  // 24. Gardening Plants
-  {
-    img1: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say how the people might prepare for these events."
-  },
-  // 25. Swimming Pool
-  {
-    img1: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=300&fit=crop",
-    img2: "https://images.unsplash.com/photo-1572492047507-e6361c7a4a6e?w=400&h=300&fit=crop",
-    question: "Compare the two pictures and say why teamwork might be important here."
-  }
+  { img1: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop", question: "Compare the two pictures and say why teamwork might be important in these situations." },
+  { img1: "https://images.unsplash.com/photo-1524594152308-39a3c8dc4d9a?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the people might be feeling." },
+  { img1: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1579586144127-4334a3b6b9c5?w=400&h=300&fit=crop", question: "Compare the two pictures and say what kind of music the people might be listening to." },
+  { img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&h=300&fit=crop", question: "Compare the two pictures and say why the people might have chosen these activities." },
+  { img1: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1542272604-787c38355395?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the people might be feeling about their appearance." },
+  { img1: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the people might be celebrating." },
+  { img1: "https://images.unsplash.com/photo-1502877338535-766e3a6052db?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&h=300&fit=crop", question: "Compare the two pictures and say why the people might be using these forms of transport." },
+  { img1: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop", question: "Compare the two pictures and say how technology might be helping the people in their work." },
+  { img1: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1571771894821-ce9b6c747b4e?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the people might be buying and why." },
+  { img1: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the people might be learning in these situations." },
+  { img1: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=300&fit=crop", question: "Compare the two pictures and say why the people might be taking these photos." },
+  { img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the people might be doing after these activities." },
+  { img1: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the weather might be affecting the people." },
+  { img1: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1554151228-14d9def656e4?w=400&h=300&fit=crop", question: "Compare the two pictures and say why the people might have chosen these clothes." },
+  { img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1517248135467-2c7ed3ed2b5a?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the disadvantages might be of these situations." },
+  { img1: "https://images.unsplash.com/photo-1502877338535-766e3a6052db?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop", question: "Compare the two pictures and say why the people might prefer these places." },
+  { img1: "https://images.unsplash.com/photo-1524504388944-b46d3b0f9f75?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the people might be learning." },
+  { img1: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the activities might affect their health." },
+  { img1: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&h=300&fit=crop", question: "Compare the two pictures and say why these people might be happy." },
+  { img1: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1551218808-94e220e084d0?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the people might do next." },
+  { img1: "https://images.unsplash.com/photo-1571113758179-48a7a8f383b2?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the environments might influence the people." },
+  { img1: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400&h=300&fit=crop", question: "Compare the two pictures and say why the people might be tired." },
+  { img1: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop", question: "Compare the two pictures and say what the similarities are in their daily routines." },
+  { img1: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the people might prepare for these events." },
+  { img1: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1572492047507-e6361c7a4a6e?w=400&h=300&fit=crop", question: "Compare the two pictures and say why teamwork might be important here." }
 ];
+
+// === KHỞI ĐỘNG ỨNG DỤNG ===
+function initApp() {
+  const saved = localStorage.getItem('speakingStudent');
+  if (saved) {
+    try {
+      student = JSON.parse(saved);
+      fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${student.code}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.exists && data.name === student.name) {
+            showExam();
+          } else {
+            localStorage.removeItem('speakingStudent');
+            showLogin();
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('speakingStudent');
+          showLogin();
+        });
+    } catch {
+      localStorage.removeItem('speakingStudent');
+      showLogin();
+    }
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('examScreen').classList.add('hidden');
+  document.getElementById('leaderboardScreen').classList.add('hidden');
+}
+
+function showExam() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+  document.getElementById('leaderboardScreen').classList.add('hidden');
+  document.getElementById('studentName').textContent = student.name;
+  document.getElementById('headerCode').textContent = student.code;
+  document.getElementById('targetLevel').textContent = student.target;
+  loadQuestion();
+  resetTimer();
+}
+
 // === ĐĂNG NHẬP ===
 async function verifyStudent() {
   const code = document.getElementById('studentCode').value.trim().toUpperCase();
-  if (!code) return alert('Nhập mã học sinh!');
+  if (!code) return alert('Vui lòng nhập mã học sinh!');
   const btn = event.target;
   const original = btn.innerHTML;
   btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
-
   try {
     const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${code}`);
     const data = await res.json();
@@ -288,20 +213,12 @@ async function verifyStudent() {
       localStorage.setItem('speakingStudent', JSON.stringify(student));
       showExam();
     } else {
-      alert('Mã không tồn tại! Liên hệ giáo viên.');
+      alert('Mã học sinh không tồn tại! Vui lòng kiểm tra lại.');
     }
-  } catch (e) { alert('Lỗi kết nối!'); }
+  } catch (e) {
+    alert('Lỗi kết nối! Vui lòng thử lại.');
+  }
   btn.disabled = false; btn.innerHTML = original;
-}
-
-function showExam() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('examScreen').classList.remove('hidden');
-  document.getElementById('studentName').textContent = student.name;
-  document.getElementById('headerCode').textContent = student.code;
-  document.getElementById('targetLevel').textContent = student.target;
-  loadQuestion();
-  resetTimer();
 }
 
 function logout() {
@@ -309,29 +226,26 @@ function logout() {
   location.reload();
 }
 
-// === TẢI CÂU HỎI NGẪU NHIÊN ===
+// === TẢI CÂU HỎI ===
 function loadQuestion() {
   const q = questions[Math.floor(Math.random() * questions.length)];
-  document.getElementById('images').innerHTML = q.images.map(img => 
-    `<img src="${img}" alt="Photo" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Loaded'">`
-  ).join('');
+  document.getElementById('images').innerHTML = `
+    <img src="${q.img1}" alt="1" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
+    <img src="${q.img2}" alt="2" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
+  `;
   document.getElementById('question').textContent = q.question;
   currentQuestion = q.question;
 }
 
-// === TIMER 60 GIÂY (chỉ cảnh báo, không dừng) ===
+// === TIMER ===
 function startTimer() {
   timeLeft = 60;
   document.getElementById('timer').textContent = '01:00';
   document.getElementById('timer').className = 'timer text-green-600';
-
   timerInterval = setInterval(() => {
     timeLeft--;
-    const mins = Math.floor(timeLeft / 60);
-    const secs = timeLeft % 60;
-    const display = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const display = `00:${timeLeft.toString().padStart(2, '0')}`;
     document.getElementById('timer').textContent = display;
-
     if (timeLeft <= 0) {
       document.getElementById('timer').textContent = '00:00';
       document.getElementById('timer').className = 'timer text-red-600 font-bold';
@@ -347,7 +261,7 @@ function resetTimer() {
   document.getElementById('timer').className = 'timer text-green-600';
 }
 
-// === GHI ÂM (chỉ dừng khi nhấn nút) ===
+// === GHI ÂM ===
 document.getElementById('startBtn').onclick = () => {
   transcript = '';
   document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh, so sánh 2 ảnh!)';
@@ -355,10 +269,8 @@ document.getElementById('startBtn').onclick = () => {
   document.getElementById('stopBtn').disabled = false;
   document.getElementById('submitBtn').disabled = true;
   startTime = Date.now();
+  startTimer();
 
-  startTimer(); // Bắt đầu đếm ngược 60s
-
-  // Speech Recognition
   recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.lang = 'en-GB';
   recognition.interimResults = true;
@@ -367,21 +279,19 @@ document.getElementById('startBtn').onclick = () => {
     transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
     document.getElementById('transcript').textContent = transcript;
   };
-  recognition.onerror = () => console.log('Speech error');
   recognition.start();
 
-  // MediaRecorder
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
     const chunks = [];
     mediaRecorder.ondataavailable = e => chunks.push(e.data);
-    mediaRecorder.onstop = () => { 
-      audioBlob = new Blob(chunks, { type: 'audio/webm' }); 
+    mediaRecorder.onstop = () => {
+      audioBlob = new Blob(chunks, { type: 'audio/webm' });
       document.getElementById('submitBtn').disabled = false;
     };
     mediaRecorder.start();
-  }).catch(e => {
-    alert('Cần cấp quyền mic!');
+  }).catch(() => {
+    alert('Cần cấp quyền micro!');
     document.getElementById('startBtn').disabled = false;
   });
 };
@@ -392,66 +302,31 @@ document.getElementById('stopBtn').onclick = () => {
   clearInterval(timerInterval);
   document.getElementById('stopBtn').disabled = true;
   document.getElementById('submitBtn').disabled = false;
-
-  const duration = Math.round((Date.now() - startTime) / 1000);
-  if (duration > 60) {
-    document.getElementById('timer').innerHTML = `00:00 <span class="text-red-600 text-sm">(Quá ${duration - 60}s!)</span>`;
-  }
 };
 
 // === GỬI AI CHẤM ===
 document.getElementById('submitBtn').onclick = async () => {
   const duration = Math.round((Date.now() - startTime) / 1000);
-
-  const dataToSend = {
-    action: 'submitSpeaking',
-    studentCode: student.code,
-    studentName: student.name,
-    targetLevel: student.target,
-    transcript: transcript,
-    question: currentQuestion,
-    duration: duration
-  };
+  const dataToSend = { action: 'submitSpeaking', studentCode: student.code, studentName: student.name, targetLevel: student.target, transcript, question: currentQuestion, duration };
 
   document.getElementById('result').innerHTML = '<div class="spinner mr-2"></div> Đang gửi...';
 
   try {
-    // BƯỚC 1: GỬI POST (no-cors)
-    await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(dataToSend)
-    });
-
-    // BƯỚC 2: LẤY ĐIỂM AI QUA GET (có CORS headers)
+    await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(dataToSend) });
     const getRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLatestScore&code=${student.code}`);
     const aiResult = await getRes.json();
 
-    // HIỂN THỊ ĐIỂM THẬT
     document.getElementById('result').innerHTML = `
       <div class="bg-green-50 p-6 rounded-lg border border-green-200">
         <h3 class="text-xl font-bold text-green-700 mb-2">Kết quả chấm (FCE Rubric)</h3>
-        <p><strong>Điểm:</strong> ${aiResult.score}/10 | <strong>CEFR:</strong> ${aiResult.cefrEquivalent}</p>
+        <p><strong>Điểm:</strong> ${aiResult.score || 'Chưa có'}/10 | <strong>CEFR:</strong> ${aiResult.cefrEquivalent || 'N/A'}</p>
         <p><strong>Thời gian nói:</strong> ${duration}s</p>
-        <p class="mt-2"><strong>Phản hồi:</strong> ${aiResult.feedback}</p>
-        <p class="mt-2 text-sm text-gray-600"><em>Transcript sạch: "${aiResult.cleanTranscript}"</em></p>
-        <details class="mt-4 text-sm">
-          <summary class="cursor-pointer font-semibold">Chi tiết chấm điểm</summary>
-          <ul class="list-disc ml-5 mt-2">
-            <li>Grammar & Vocab: ${aiResult.details.grammar}/3</li>
-            <li>Discourse Management: ${aiResult.details.discourse}/3</li>
-            <li>Pronunciation: ${aiResult.details.pron}/2</li>
-            <li>Communication: ${aiResult.details.comm}/2</li>
-          </ul>
-        </details>
+        <p class="mt-2"><strong>Phản hồi:</strong> ${aiResult.feedback || 'Đang xử lý...'}</p>
       </div>
     `;
-
-    showLeaderboard(); // Cập nhật bảng xếp hạng
+    showLeaderboard();
   } catch (e) {
     document.getElementById('result').innerHTML = '<p class="text-red-600">Lỗi! Thử lại.</p>';
-    console.error(e);
   }
 };
 
@@ -463,7 +338,7 @@ async function showLeaderboard() {
     const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=leaderboard`);
     const data = await res.json();
     const tbody = document.getElementById('leaderboardBody');
-    tbody.innerHTML = data.map((s, i) => `
+    tbody.innerHTML = data.length ? data.map((s, i) => `
       <tr class="${i%2===0 ? 'bg-gray-50' : ''}">
         <td class="p-3 font-bold text-green-700">${i+1}</td>
         <td class="p-3">${s.name}</td>
@@ -471,8 +346,10 @@ async function showLeaderboard() {
         <td class="p-3 text-center">${s.count}</td>
         <td class="p-3 text-center">${s.avg.toFixed(1)}</td>
       </tr>
-    `).join('');
-  } catch (e) { alert('Lỗi load bảng xếp hạng!'); }
+    `).join('') : '<tr><td colspan="5" class="p-6 text-center text-gray-500">Chưa có dữ liệu</td></tr>';
+  } catch {
+    document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="5" class="p-6 text-center text-red-600">Lỗi kết nối</td></tr>';
+  }
 }
 
 function hideLeaderboard() {
@@ -488,11 +365,8 @@ function restartExam() {
   resetTimer();
 }
 
-// Khôi phục session
-if (localStorage.getItem('speakingStudent')) {
-  student = JSON.parse(localStorage.getItem('speakingStudent'));
-  showExam();
-}
+// === KHỞI ĐỘNG ===
+initApp();
 </script>
 </body>
 </html>
