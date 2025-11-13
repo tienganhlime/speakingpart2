@@ -21,7 +21,7 @@
 <body class="p-4">
 <div id="app" class="max-w-4xl mx-auto">
 
-  <!-- LOGIN SCREEN -->
+  <!-- LOGIN -->
   <div id="loginScreen" class="min-h-screen fade-in">
     <div class="bg-white rounded-2xl shadow-2xl p-8 mt-8">
       <div class="text-center mb-8">
@@ -29,12 +29,6 @@
         <h1 class="text-4xl font-bold text-green-700 mb-2">Trung Tâm Tiếng Anh LIME</h1>
         <p class="text-green-600 text-lg">Hotline: 0976222792</p>
         <div class="mt-4 h-1 w-32 bg-green-500 mx-auto rounded"></div>
-      </div>
-      <div class="bg-green-50 rounded-xl p-6 mb-6">
-        <h2 class="text-2xl font-bold text-green-800 mb-4">FCE SPEAKING PART 2</h2>
-        <p class="text-green-700">So sánh 2 ảnh + trả lời câu hỏi trong 1 phút</p>
-        <p class="text-green-700">AI chấm theo FCE rubric</p>
-        <p class="text-green-700">Leaderboard: Tổng điểm + Trung bình</p>
       </div>
       <label class="block text-green-800 font-semibold mb-2">Mã học sinh *</label>
       <input type="text" id="studentCode" class="w-full px-4 py-3 border-2 border-green-300 rounded-lg uppercase text-lg" placeholder="VD: HS001" />
@@ -44,7 +38,7 @@
     </div>
   </div>
 
-  <!-- EXAM SCREEN -->
+  <!-- EXAM -->
   <div id="examScreen" class="hidden min-h-screen pb-20">
     <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10">
       <div class="flex justify-between items-center flex-wrap gap-4">
@@ -57,7 +51,6 @@
         </div>
         <div class="text-right">
           <p class="text-sm text-gray-600">Mã: <span id="headerCode"></span></p>
-          <p class="text-sm text-gray-600">Mục tiêu: <span id="targetLevel"></span></p>
           <div class="timer" id="timer">01:00</div>
         </div>
       </div>
@@ -83,17 +76,13 @@
       <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm" để nói...</div>
       <div id="result" class="mt-6"></div>
 
-      <label class="flex items-center gap-2 mt-6 text-gray-700">
-        <input type="checkbox" id="saveAudio" /> Lưu audio?
-      </label>
-
       <button onclick="restartExam()" class="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">
         Làm bài mới
       </button>
     </div>
   </div>
 
-  <!-- LEADERBOARD SCREEN -->
+  <!-- LEADERBOARD -->
   <div id="leaderboardScreen" class="hidden min-h-screen pb-20">
     <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10 flex justify-between items-center">
       <h1 class="text-2xl font-bold text-green-700">BẢNG XẾP HẠNG</h1>
@@ -119,11 +108,11 @@
 
 <script>
 // === CẤU HÌNH ===
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec'; // THAY BẰNG URL CỦA BẠN
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec'; // THAY URL CỦA BẠN
 
 let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
 
-// === 25 CẶP ẢNH + CÂU HỎI (ỔN ĐỊNH, KHÔNG 404) ===
+// === 25 CẶP ẢNH ===
 const questions = [
   { img1: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop", question: "Compare the two pictures and say why teamwork might be important in these situations." },
   { img1: "https://images.unsplash.com/photo-1524594152308-39a3c8dc4d9a?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the people might be feeling." },
@@ -151,218 +140,88 @@ const questions = [
   { img1: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&h=300&fit=crop", question: "Compare the two pictures and say how the people might prepare for these events." },
   { img1: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=300&fit=crop", img2: "https://images.unsplash.com/photo-1572492047507-e6361c7a4a6e?w=400&h=300&fit=crop", question: "Compare the two pictures and say why teamwork might be important here." }
 ];
-
-// === KHỞI ĐỘNG ỨNG DỤNG ===
+// === INIT ===
 function initApp() {
   const saved = localStorage.getItem('speakingStudent');
   if (saved) {
-    try {
-      student = JSON.parse(saved);
-      fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${student.code}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.exists && data.name === student.name) {
-            showExam();
-          } else {
-            localStorage.removeItem('speakingStudent');
-            showLogin();
-          }
-        })
-        .catch(() => {
-          localStorage.removeItem('speakingStudent');
-          showLogin();
-        });
-    } catch {
-      localStorage.removeItem('speakingStudent');
-      showLogin();
-    }
+    student = JSON.parse(saved);
+    verifyStudentFromLocal();
   } else {
     showLogin();
   }
 }
 
-function showLogin() {
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('examScreen').classList.add('hidden');
-  document.getElementById('leaderboardScreen').classList.add('hidden');
-}
-
-function showExam() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('examScreen').classList.remove('hidden');
-  document.getElementById('leaderboardScreen').classList.add('hidden');
-  document.getElementById('studentName').textContent = student.name;
-  document.getElementById('headerCode').textContent = student.code;
-  document.getElementById('targetLevel').textContent = student.target;
-  loadQuestion();
-  resetTimer();
-}
+function showLogin() { /* ... */ }
+function showExam() { /* ... */ }
 
 // === ĐĂNG NHẬP ===
 async function verifyStudent() {
   const code = document.getElementById('studentCode').value.trim().toUpperCase();
-  if (!code) return alert('Vui lòng nhập mã học sinh!');
-  const btn = event.target;
-  const original = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
+  if (!code) return alert('Nhập mã!');
   try {
     const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${code}`);
     const data = await res.json();
     if (data.exists) {
-      student = { code, name: data.name, target: data.target || 'B1' };
+      student = { code, name: data.name };
       localStorage.setItem('speakingStudent', JSON.stringify(student));
       showExam();
     } else {
-      alert('Mã học sinh không tồn tại! Vui lòng kiểm tra lại.');
+      alert('Mã không tồn tại!');
     }
-  } catch (e) {
-    alert('Lỗi kết nối! Vui lòng thử lại.');
-  }
-  btn.disabled = false; btn.innerHTML = original;
+  } catch { alert('Lỗi kết nối!'); }
 }
 
-function logout() {
-  localStorage.removeItem('speakingStudent');
-  location.reload();
-}
-
-// === TẢI CÂU HỎI ===
-function loadQuestion() {
-  const q = questions[Math.floor(Math.random() * questions.length)];
-  document.getElementById('images').innerHTML = `
-    <img src="${q.img1}" alt="1" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
-    <img src="${q.img2}" alt="2" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
-  `;
-  document.getElementById('question').textContent = q.question;
-  currentQuestion = q.question;
-}
-
-// === TIMER ===
-function startTimer() {
-  timeLeft = 60;
-  document.getElementById('timer').textContent = '01:00';
-  document.getElementById('timer').className = 'timer text-green-600';
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    const display = `00:${timeLeft.toString().padStart(2, '0')}`;
-    document.getElementById('timer').textContent = display;
-    if (timeLeft <= 0) {
-      document.getElementById('timer').textContent = '00:00';
-      document.getElementById('timer').className = 'timer text-red-600 font-bold';
-      document.getElementById('timer').innerHTML += ' <span class="text-sm">(Quá giờ!)</span>';
-      clearInterval(timerInterval);
-    }
-  }, 1000);
-}
-
-function resetTimer() {
-  clearInterval(timerInterval);
-  document.getElementById('timer').textContent = '01:00';
-  document.getElementById('timer').className = 'timer text-green-600';
-}
-
-// === GHI ÂM ===
-document.getElementById('startBtn').onclick = () => {
-  transcript = '';
-  document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh, so sánh 2 ảnh!)';
-  document.getElementById('startBtn').disabled = true;
-  document.getElementById('stopBtn').disabled = false;
-  document.getElementById('submitBtn').disabled = true;
-  startTime = Date.now();
-  startTimer();
-
-  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'en-GB';
-  recognition.interimResults = true;
-  recognition.continuous = true;
-  recognition.onresult = e => {
-    transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-    document.getElementById('transcript').textContent = transcript;
-  };
-  recognition.start();
-
-  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    mediaRecorder = new MediaRecorder(stream);
-    const chunks = [];
-    mediaRecorder.ondataavailable = e => chunks.push(e.data);
-    mediaRecorder.onstop = () => {
-      audioBlob = new Blob(chunks, { type: 'audio/webm' });
-      document.getElementById('submitBtn').disabled = false;
-    };
-    mediaRecorder.start();
-  }).catch(() => {
-    alert('Cần cấp quyền micro!');
-    document.getElementById('startBtn').disabled = false;
-  });
-};
-
-document.getElementById('stopBtn').onclick = () => {
-  recognition?.stop();
-  mediaRecorder?.stop();
-  clearInterval(timerInterval);
-  document.getElementById('stopBtn').disabled = true;
-  document.getElementById('submitBtn').disabled = false;
-};
-
-// === GỬI AI CHẤM ===
+// === GỬI DỮ LIỆU (NO-CORS) ===
 document.getElementById('submitBtn').onclick = async () => {
   const duration = Math.round((Date.now() - startTime) / 1000);
-  const dataToSend = { action: 'submitSpeaking', studentCode: student.code, studentName: student.name, targetLevel: student.target, transcript, question: currentQuestion, duration };
+  const data = { action: 'submitSpeaking', studentCode: student.code, transcript, question: currentQuestion, duration };
 
-  document.getElementById('result').innerHTML = '<div class="spinner mr-2"></div> Đang gửi...';
+  document.getElementById('result').innerHTML = '<div class="spinner"></div> Đang gửi...';
 
+  // Gửi không cần CORS
+  await fetch(GOOGLE_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify(data)
+  });
+
+  // L lấy kết quả sau 3s
+  setTimeout(fetchLatestScore, 3000);
+};
+
+async function fetchLatestScore() {
   try {
-    await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(dataToSend) });
-    const getRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLatestScore&code=${student.code}`);
-    const aiResult = await getRes.json();
-
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLatestScore&code=${student.code}`);
+    const data = await res.json();
     document.getElementById('result').innerHTML = `
       <div class="bg-green-50 p-6 rounded-lg border border-green-200">
-        <h3 class="text-xl font-bold text-green-700 mb-2">Kết quả chấm (FCE Rubric)</h3>
-        <p><strong>Điểm:</strong> ${aiResult.score || 'Chưa có'}/10 | <strong>CEFR:</strong> ${aiResult.cefrEquivalent || 'N/A'}</p>
-        <p><strong>Thời gian nói:</strong> ${duration}s</p>
-        <p class="mt-2"><strong>Phản hồi:</strong> ${aiResult.feedback || 'Đang xử lý...'}</p>
+        <h3 class="text-xl font-bold text-green-700 mb-2">Kết quả AI</h3>
+        <p><strong>Điểm:</strong> ${data.score}/10 | <strong>CEFR:</strong> ${data.cefr}</p>
+        <p class="mt-2"><strong>Phản hồi:</strong> ${data.feedback}</p>
       </div>
     `;
     showLeaderboard();
-  } catch (e) {
+  } catch {
     document.getElementById('result').innerHTML = '<p class="text-red-600">Lỗi! Thử lại.</p>';
   }
-};
+}
 
 // === LEADERBOARD ===
 async function showLeaderboard() {
   document.getElementById('examScreen').classList.add('hidden');
   document.getElementById('leaderboardScreen').classList.remove('hidden');
-  try {
-    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=leaderboard`);
-    const data = await res.json();
-    const tbody = document.getElementById('leaderboardBody');
-    tbody.innerHTML = data.length ? data.map((s, i) => `
-      <tr class="${i%2===0 ? 'bg-gray-50' : ''}">
-        <td class="p-3 font-bold text-green-700">${i+1}</td>
-        <td class="p-3">${s.name}</td>
-        <td class="p-3 text-center font-bold">${s.total.toFixed(1)}</td>
-        <td class="p-3 text-center">${s.count}</td>
-        <td class="p-3 text-center">${s.avg.toFixed(1)}</td>
-      </tr>
-    `).join('') : '<tr><td colspan="5" class="p-6 text-center text-gray-500">Chưa có dữ liệu</td></tr>';
-  } catch {
-    document.getElementById('leaderboardBody').innerHTML = '<tr><td colspan="5" class="p-6 text-center text-red-600">Lỗi kết nối</td></tr>';
-  }
-}
-
-function hideLeaderboard() {
-  document.getElementById('leaderboardScreen').classList.add('hidden');
-  document.getElementById('examScreen').classList.remove('hidden');
-}
-
-function restartExam() {
-  loadQuestion();
-  document.getElementById('result').innerHTML = '';
-  document.getElementById('transcript').textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
-  document.getElementById('startBtn').disabled = false;
-  resetTimer();
+  const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=leaderboard`);
+  const data = await res.json();
+  const tbody = document.getElementById('leaderboardBody');
+  tbody.innerHTML = data.map((s, i) => `
+    <tr class="${i%2===0 ? 'bg-gray-50' : ''}">
+      <td class="p-3 font-bold text-green-700">${i+1}</td>
+      <td class="p-3">${s.name}</td>
+      <td class="p-3 text-center font-bold">${s.total.toFixed(1)}</td>
+      <td class="p-3 text-center">${s.count}</td>
+      <td class="p-3 text-center">${s.avg.toFixed(1)}</td>
+    </tr>
+  `).join('');
 }
 
 // === KHỞI ĐỘNG ===
