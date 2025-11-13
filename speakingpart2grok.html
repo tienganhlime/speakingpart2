@@ -308,20 +308,34 @@ function showExam() {
 
 // === ĐĂNG NHẬP ===
 async function verifyStudent() {
-  const code = document.getElementById('studentCode').value.trim().toUpperCase();
+  let code = document.getElementById('studentCode').value;
   if (!code) return alert('Nhập mã!');
-  const btn = event.target; const original = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
+  
+  code = code.trim().toUpperCase(); // CHỐT: Chuẩn hóa ngay ở frontend!
+
+  const btn = event.target;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
+
   try {
-    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${code}`);
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${encodeURIComponent(code)}`);
     const data = await res.json();
+    
     if (data.exists) {
       student = { code, name: data.name, target: data.target || 'B1' };
       localStorage.setItem('speakingStudent', JSON.stringify(student));
       showExam();
-    } else alert('Mã không tồn tại!');
-  } catch { alert('Lỗi kết nối!'); }
-  btn.disabled = false; btn.innerHTML = original;
+    } else {
+      alert('Mã không tồn tại! Kiểm tra lại: ' + code);
+    }
+  } catch (err) {
+    console.error('Lỗi fetch:', err);
+    alert('Lỗi kết nối! Kiểm tra mạng hoặc URL script.');
+  }
+  
+  btn.disabled = false;
+  btn.innerHTML = original;
 }
 
 function logout() { localStorage.removeItem('speakingStudent'); location.reload(); }
