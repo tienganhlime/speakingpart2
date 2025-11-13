@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FCE Speaking Part 2 - LIME</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); min-height: 100vh; }
+    .fade-in { animation: fadeIn 0.5s ease-in; } @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #4CAF50; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+    .images { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .images img { width: 45%; min-width: 200px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .timer { font-size: 1.5em; font-weight: bold; color: #dc2626; }
+    .small-btn { @apply px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg; }
+  </style>
+</head>
+<body class="p-4">
+<div id="app" class="max-w-4xl mx-auto">
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="min-h-screen fade-in">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 mt-8">
+      <div class="text-center mb-8">
+        <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-32 h-32 mx-auto mb-4 object-contain">
+        <h1 class="text-4xl font-bold text-green-700 mb-2">Trung Tâm Tiếng Anh LIME</h1>
+        <p class="text-green-600 text-lg">Hotline: 0976222792</p>
+        <div class="mt-4 h-1 w-32 bg-green-500 mx-auto rounded"></div>
+      </div>
+      <div class="bg-green-50 rounded-xl p-6 mb-6">
+        <h2 class="text-2xl font-bold text-green-800 mb-4">FCE SPEAKING PART 2</h2>
+        <p class="text-green-700">So sánh 2 ảnh + trả lời câu hỏi trong 1 phút</p>
+        <p class="text-green-700">AI chấm theo FCE rubric</p>
+        <p class="text-green-700">Leaderboard: Tổng điểm + Trung bình</p>
+      </div>
+      <label class="block text-green-800 font-semibold mb-2">Mã học sinh *</label>
+      <input type="text" id="studentCode" class="w-full px-4 py-3 border-2 border-green-300 rounded-lg uppercase text-lg" placeholder="VD: HS001" />
+      <button onclick="verifyStudent()" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg text-lg shadow-lg">
+        XÁC NHẬN & BẮT ĐẦU
+      </button>
+    </div>
+  </div>
+
+  <!-- EXAM -->
+  <div id="examScreen" class="hidden min-h-screen pb-20">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10">
+      <div class="flex justify-between items-center flex-wrap gap-4">
+        <div class:flex items-center gap-3">
+          <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-12 h-12 object-contain">
+          <div>
+            <h1 class="text-2xl font-bold text-green-700">FCE Speaking Part 2</h1>
+            <p class="text-green-600 text-sm">Xin chào, <span id="studentName"></span>!</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-sm text-gray-600">Mã: <span id="headerCode"></span></p>
+          <p class="text-sm text-gray-600">Mục tiêu: <span id="targetLevel"></span></p>
+          <div class="timer" id="timer">01:00</div>
+        </div>
+      </div>
+      <div class="mt-4 flex gap-2 justify-end">
+        <button onclick="showLeaderboard()" class="small-btn">Bảng xếp hạng</button>
+        <button onclick="logout()" class="small-btn">Đăng xuất</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6 fade-in">
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-4 rounded-t-xl -mx-8 -mt-8 mb-6">
+        <h2 class="text-2xl font-bold">So sánh 2 bức tranh</h2>
+      </div>
+      <div class="images mb-6" id="images"></div>
+      <p class="text-lg font-semibold text-indigo-800 mb-6 p-4 bg-indigo-50 rounded-lg" id="question"></p>
+
+      <div class="flex gap-3 flex-wrap mb-4">
+        <button id="startBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">Bắt đầu ghi âm</button>
+        <button id="stopBtn" disabled class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg">Dừng</button>
+        <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">Gửi AI chấm</button>
+      </div>
+
+      <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm"...</div>
+      <div id="result" class="mt-6"></div>
+
+      <label class="flex items-center gap-2 mt-6 text-gray-700">
+        <input type="checkbox" id="saveAudio" /> Lưu audio?
+      </label>
+
+      <button onclick="restartExam()" class="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">
+        Làm bài mới
+      </button>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="leaderboardScreen" class="hidden min-h-screen pb-20">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-green-700">BẢNG XẾP HẠNG</h1>
+      <button onclick="hideLeaderboard()" class="small-btn">Quay lại</button>
+    </div>
+    <div class="bg-white rounded-2xl shadow-2xl p-6 overflow-x-auto">
+      <table class="w-full table-auto border-collapse">
+        <thead>
+          <tr class="bg-green-100 text-green-800">
+            <th class="p-3 text-left">Hạng</th>
+            <th class="p-3 text-left">Học sinh</th>
+            <th class="p-3 text-center">Tổng điểm</th>
+            <th class="p-3 text-center">Số bài</th>
+            <th class="p-3 text-center">Trung bình</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+<script>
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec'; // Thay bằng URL Apps Script của bạn
+let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
+
+// 25 CẶP ẢNH + CÂU HỎI (từ Unsplash/Pexels, online miễn phí, có người)
+const questions = [
+  { images: ["https://images.unsplash.com/photo-1516979187457-637a1ec45b07?w=400", "https://images.unsplash.com/photo-1505455184862-554165e5f6ba?w=400"], question: "Compare the two pictures and say why the people might be doing these activities." },
+  { images: ["https://images.unsplash.com/photo-1530103362543-a2da6d9376bd?w=400", "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400"], question: "Compare the two pictures and say how the people might be feeling." },
+  { images: ["https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400", "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400"], question: "Compare the two pictures and say why sport is important to these people." },
+  { images: ["https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400", "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400"], question: "Compare the two pictures and say what the advantages might be of living in these places." },
+  { images: ["https://images.unsplash.com/photo-1505840717430-882ce147ef2d?w=400", "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400"], question: "Compare the two pictures and say how the people might have chosen these jobs." },
+  { images: ["https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400", "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"], question: "Compare the two pictures and say why the people might enjoy these hobbies." },
+  { images: ["https://images.unsplash.com/photo-1516979187457-637a1ec45b07?w=400", "https://images.unsplash.com/photo-1505455184862-554165e5f6ba?w=400"], question: "Compare the two pictures and say what the people might be talking about." },
+  { images: ["https://images.unsplash.com/photo-1530103362543-a2da6d9376bd?w=400", "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400"], question: "Compare the two pictures and say how comfortable the people might feel." },
+  { images: ["https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400", "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400"], question: "Compare the two pictures and say why these activities might be relaxing." },
+  { images: ["https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400", "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400"], question: "Compare the two pictures and say what the disadvantages might be of these situations." },
+  { images: ["https://images.unsplash.com/photo-1505840717430-882ce147ef2d?w=400", "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400"], question: "Compare the two pictures and say how the people might feel about their work." },
+  { images: ["https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400", "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"], question: "Compare the two pictures and say why the people might prefer these places." },
+  { images: ["https://images.unsplash.com/photo-1516979187457-637a1ec45b07?w=400", "https://images.unsplash.com/photo-1505455184862-554165e5f6ba?w=400"], question: "Compare the two pictures and say what the people might be learning." },
+  { images: ["https://images.unsplash.com/photo-1530103362543-a2da6d9376bd?w=400", "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400"], question: "Compare the two pictures and say how the activities might affect their health." },
+  { images: ["https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400", "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400"], question: "Compare the two pictures and say why these people might be happy." },
+  { images: ["https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400", "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400"], question: "Compare the two pictures and say what the people might do next." },
+  { images: ["https://images.unsplash.com/photo-1505840717430-882ce147ef2d?w=400", "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400"], question: "Compare the two pictures and say how the environments might influence the people." },
+  { images: ["https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400", "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"], question: "Compare the two pictures and say why the people might be tired." },
+  { images: ["https://images.unsplash.com/photo-1516979187457-637a1ec45b07?w=400", "https://images.unsplash.com/photo-1505455184862-554165e5f6ba?w=400"], question: "Compare the two pictures and say what the similarities are in their daily routines." },
+  { images: ["https://images.unsplash.com/photo-1530103362543-a2da6d9376bd?w=400", "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=400"], question: "Compare the two pictures and say how the people might prepare for these events." },
+  { images: ["https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400", "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400"], question: "Compare the two pictures and say why teamwork might be important here." },
+  { images: ["https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=400", "https://images.unsplash.com/photo-1519455953755-9d11a8e6d19c?w=400"], question: "Compare the two pictures and say what the people might achieve from this." },
+  { images: ["https://images.unsplash.com/photo-1505840717430-882ce147ef2d?w=400", "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400"], question: "Compare the two pictures and say how the weather might affect their mood." },
+  { images: ["https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400", "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400"], question: "Compare the two pictures and say why these activities might be challenging." },
+  { images: ["https://images.unsplash.com/photo-1516979187457-637a1ec45b07?w=400", "https://images.unsplash.com/photo-1505455184862-554165e5f6ba?w=400"], question: "Compare the two pictures and say what advice you would give to the people." }
+];
+
+// === ĐĂNG NHẬP ===
+async function verifyStudent() {
+  const code = document.getElementById('studentCode').value.trim().toUpperCase();
+  if (!code) return alert('Nhập mã học sinh!');
+  const btn = event.target;
+  const original = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
+
+  try {
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${code}`);
+    const data = await res.json();
+    if (data.exists) {
+      student = { code, name: data.name, target: data.target || 'B1' };
+      localStorage.setItem('speakingStudent', JSON.stringify(student));
+      showExam();
+    } else {
+      alert('Mã không tồn tại! Liên hệ giáo viên.');
+    }
+  } catch (e) { alert('Lỗi kết nối!'); }
+  btn.disabled = false; btn.innerHTML = original;
+}
+
+function showExam() {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+  document.getElementById('studentName').textContent = student.name;
+  document.getElementById('headerCode').textContent = student.code;
+  document.getElementById('targetLevel').textContent = student.target;
+  loadQuestion();
+  resetTimer();
+}
+
+function logout() {
+  localStorage.removeItem('speakingStudent');
+  location.reload();
+}
+
+// === TẢI CÂU HỎI NGẪU NHIÊN ===
+function loadQuestion() {
+  const q = questions[Math.floor(Math.random() * questions.length)];
+  document.getElementById('images').innerHTML = q.images.map(img => 
+    `<img src="${img}" alt="Photo" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Loaded'">`
+  ).join('');
+  document.getElementById('question').textContent = q.question;
+  currentQuestion = q.question;
+}
+
+// === TIMER 60 GIÂY (chỉ cảnh báo, không dừng) ===
+function startTimer() {
+  timeLeft = 60;
+  document.getElementById('timer').textContent = '01:00';
+  document.getElementById('timer').className = 'timer text-green-600';
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    const display = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    document.getElementById('timer').textContent = display;
+
+    if (timeLeft <= 0) {
+      document.getElementById('timer').textContent = '00:00';
+      document.getElementById('timer').className = 'timer text-red-600 font-bold';
+      document.getElementById('timer').innerHTML += ' <span class="text-sm">(Quá giờ!)</span>';
+      clearInterval(timerInterval);
+    }
+  }, 1000);
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timer').textContent = '01:00';
+  document.getElementById('timer').className = 'timer text-green-600';
+}
+
+// === GHI ÂM (chỉ dừng khi nhấn nút) ===
+document.getElementById('startBtn').onclick = () => {
+  transcript = '';
+  document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh, so sánh 2 ảnh!)';
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('submitBtn').disabled = true;
+  startTime = Date.now();
+
+  startTimer(); // Bắt đầu đếm ngược 60s
+
+  // Speech Recognition
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-GB';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.onresult = e => {
+    transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
+    document.getElementById('transcript').textContent = transcript;
+  };
+  recognition.onerror = () => console.log('Speech error');
+  recognition.start();
+
+  // MediaRecorder
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    mediaRecorder = new MediaRecorder(stream);
+    const chunks = [];
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.onstop = () => { 
+      audioBlob = new Blob(chunks, { type: 'audio/webm' }); 
+      document.getElementById('submitBtn').disabled = false;
+    };
+    mediaRecorder.start();
+  }).catch(e => {
+    alert('Cần cấp quyền mic!');
+    document.getElementById('startBtn').disabled = false;
+  });
+};
+
+document.getElementById('stopBtn').onclick = () => {
+  recognition?.stop();
+  mediaRecorder?.stop();
+  clearInterval(timerInterval);
+  document.getElementById('stopBtn').disabled = true;
+  document.getElementById('submitBtn').disabled = false;
+
+  const duration = Math.round((Date.now() - startTime) / 1000);
+  if (duration > 60) {
+    document.getElementById('timer').innerHTML = `00:00 <span class="text-red-600 text-sm">(Quá ${duration - 60}s!)</span>`;
+  }
+};
+
+// === GỬI AI CHẤM ===
+document.getElementById('submitBtn').onclick = async () => {
+  const saveAudio = document.getElementById('saveAudio').checked;
+  const duration = Math.round((Date.now() - startTime) / 1000);
+  const form = new FormData();
+  form.append('action', 'submitSpeaking');
+  form.append('studentCode', student.code);
+  form.append('studentName', student.name);
+  form.append('targetLevel', student.target);
+  form.append('transcript', transcript);
+  form.append('question', currentQuestion);
+  form.append('duration', duration);
+  if (saveAudio && audioBlob) form.append('audio', audioBlob, `${student.code}_speaking.webm`);
+
+  document.getElementById('result').innerHTML = '<p class="text-blue-600">Đang chấm bởi Groq AI...</p>';
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: form });
+    const result = await res.json();
+    document.getElementById('result').innerHTML = `
+      <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+        <h3 class="text-xl font-bold text-green-700 mb-2">Kết quả chấm (FCE Rubric)</h3>
+        <p><strong>Điểm:</strong> ${result.score}/10 | <strong>CEFR:</strong> ${result.cefrEquivalent}</p>
+        <p><strong>Thời gian nói:</strong> ${duration}s ${duration > 60 ? '<span class="text-red-600">(Quá giờ!)</span>' : ''}</p>
+        <p class="mt-2"><strong>Phản hồi:</strong> ${result.feedback}</p>
+        <p class="mt-2 text-sm text-gray-600"><em>Transcript sạch: "${result.cleanTranscript}"</em></p>
+        <details class="mt-4 text-sm">
+          <summary class="cursor-pointer font-semibold">Chi tiết chấm điểm</summary>
+          <ul class="list-disc ml-5 mt-2">
+            <li>Grammar & Vocab: ${result.details.grammar}/3</li>
+            <li>Discourse Management: ${result.details.discourse}/3</li>
+            <li>Pronunciation: ${result.details.pron}/2</li>
+            <li>Communication: ${result.details.comm}/2</li>
+          </ul>
+        </details>
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('result').innerHTML = '<p class="text-red-600">Lỗi kết nối!</p>';
+  }
+};
+
+// === LEADERBOARD ===
+async function showLeaderboard() {
+  document.getElementById('examScreen').classList.add('hidden');
+  document.getElementById('leaderboardScreen').classList.remove('hidden');
+  try {
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=leaderboard`);
+    const data = await res.json();
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = data.map((s, i) => `
+      <tr class="${i%2===0 ? 'bg-gray-50' : ''}">
+        <td class="p-3 font-bold text-green-700">${i+1}</td>
+        <td class="p-3">${s.name}</td>
+        <td class="p-3 text-center font-bold">${s.total.toFixed(1)}</td>
+        <td class="p-3 text-center">${s.count}</td>
+        <td class="p-3 text-center">${s.avg.toFixed(1)}</td>
+      </tr>
+    `).join('');
+  } catch (e) { alert('Lỗi load bảng xếp hạng!'); }
+}
+
+function hideLeaderboard() {
+  document.getElementById('leaderboardScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+}
+
+function restartExam() {
+  loadQuestion();
+  document.getElementById('result').innerHTML = '';
+  document.getElementById('transcript').textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
+  document.getElementById('startBtn').disabled = false;
+  resetTimer();
+}
+
+// Khôi phục session
+if (localStorage.getItem('speakingStudent')) {
+  student = JSON.parse(localStorage.getItem('speakingStudent'));
+  showExam();
+}
+</script>
+</body>
+</html>
