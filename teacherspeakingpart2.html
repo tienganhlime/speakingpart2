@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Teacher Dashboard - LIME FCE Speaking</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { 
+      font-family: 'Segoe UI', sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+      min-height: 100vh; 
+    }
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .stat-card { @apply bg-white rounded-xl shadow-lg p-6 text-center; }
+    .stat-value { @apply text-4xl font-bold text-indigo-700 mb-2; }
+    .stat-label { @apply text-gray-600 text-sm; }
+    .btn-primary { @apply bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition; }
+    .btn-secondary { @apply bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition; }
+    .trend-up { @apply text-green-600 font-bold; }
+    .trend-down { @apply text-red-600 font-bold; }
+    .trend-neutral { @apply text-gray-600 font-bold; }
+  </style>
+</head>
+<body class="p-4">
+
+<!-- PASSWORD SCREEN -->
+<div id="passwordScreen" class="min-h-screen flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full fade-in">
+    <div class="text-center mb-6">
+      <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-24 h-24 mx-auto mb-4 object-contain">
+      <h1 class="text-3xl font-bold text-indigo-700 mb-2">Teacher Dashboard</h1>
+      <p class="text-gray-600">Nhập mật khẩu để tiếp tục</p>
+    </div>
+    <input type="password" id="passwordInput" class="w-full px-4 py-3 border-2 border-indigo-300 rounded-lg text-lg mb-4" placeholder="Mật khẩu" />
+    <button onclick="checkPassword()" class="w-full btn-primary py-3 text-lg">
+      Đăng nhập
+    </button>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD -->
+<div id="dashboard" class="hidden max-w-7xl mx-auto pb-20">
+  <!-- HEADER -->
+  <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10">
+    <div class="flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-12 h-12 object-contain">
+        <div>
+          <h1 class="text-2xl font-bold text-indigo-700">Teacher Dashboard</h1>
+          <p class="text-gray-600 text-sm">FCE Speaking Part 2</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="exportExcel()" class="btn-primary">📥 Xuất Excel</button>
+        <button onclick="logout()" class="btn-secondary">Đăng xuất</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATISTICS CARDS -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 fade-in">
+    <div class="stat-card">
+      <div class="stat-value" id="totalStudents">-</div>
+      <div class="stat-label">Tổng học sinh</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="totalTests">-</div>
+      <div class="stat-label">Tổng bài thi</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="classAverage">-</div>
+      <div class="stat-label">Điểm TB lớp</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="passRate">-</div>
+      <div class="stat-label">Tỉ lệ đạt B1+</div>
+    </div>
+  </div>
+
+  <!-- TOP IMPROVERS -->
+  <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 fade-in">
+    <h2 class="text-xl font-bold text-indigo-700 mb-4">🏆 Top 5 tiến bộ nhất</h2>
+    <div id="topImprovers" class="space-y-2">
+      <div class="text-gray-500">Đang tải...</div>
+    </div>
+  </div>
+
+  <!-- STUDENTS TABLE -->
+  <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 fade-in">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold text-indigo-700">📊 Danh sách học sinh</h2>
+      <input type="text" id="searchInput" onkeyup="filterTable()" class="px-4 py-2 border-2 border-indigo-300 rounded-lg" placeholder="Tìm kiếm...">
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full table-auto border-collapse" id="studentTable">
+        <thead>
+          <tr class="bg-indigo-100 text-indigo-800">
+            <th class="p-3 text-left">Hạng</th>
+            <th class="p-3 text-left">Mã</th>
+            <th class="p-3 text-left">Họ tên</th>
+            <th class="p-3 text-center">Target</th>
+            <th class="p-3 text-center">Số bài</th>
+            <th class="p-3 text-center">TB</th>
+            <th class="p-3 text-center">Cao nhất</th>
+            <th class="p-3 text-center">Thấp nhất</th>
+            <th class="p-3 text-center">Xu hướng</th>
+            <th class="p-3 text-center">Chi tiết</th>
+          </tr>
+        </thead>
+        <tbody id="studentTableBody">
+          <tr><td colspan="10" class="p-6 text-center text-gray-500">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT DETAIL MODAL -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-indigo-600 text-white p-6 rounded-t-2xl">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-2xl font-bold" id="modalStudentName">-</h2>
+          <p class="text-indigo-200" id="modalStudentCode">-</p>
+        </div>
+        <button onclick="closeModal()" class="text-white hover:text-indigo-200 text-3xl">&times;</button>
+      </div>
+    </div>
+    
+    <div class="p-6">
+      <!-- CHART -->
+      <div class="mb-6">
+        <h3 class="text-lg font-bold text-gray-700 mb-3">📈 Biểu đồ tiến triển</h3>
+        <canvas id="progressChart" width="400" height="200"></canvas>
+      </div>
+      
+      <!-- HISTORY -->
+      <div>
+        <h3 class="text-lg font-bold text-gray-700 mb-3">📝 Lịch sử bài thi</h3>
+        <div id="historyList" class="space-y-4"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec';
+const TEACHER_PASSWORD = 'lime2025@'; // THAY ĐỔI MẬT KHẨU Ở ĐÂY
+
+let allStudentsData = [];
+let currentChart = null;
+
+// ========================================
+// PASSWORD CHECK
+// ========================================
+function checkPassword() {
+  const input = document.getElementById('passwordInput').value;
+  if (input === TEACHER_PASSWORD) {
+    document.getElementById('passwordScreen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    loadDashboard();
+  } else {
+    alert('❌ Sai mật khẩu!');
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordInput').focus();
+  }
+}
+
+// Enter để login
+document.getElementById('passwordInput')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') checkPassword();
+});
+
+// ========================================
+// LOAD DASHBOARD
+// ========================================
+async function loadDashboard() {
+  try {
+    // Load stats
+    const statsRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=teacherStats`);
+    const stats = await statsRes.json();
+    
+    document.getElementById('totalStudents').textContent = stats.totalStudents || 0;
+    document.getElementById('totalTests').textContent = stats.totalTests || 0;
+    document.getElementById('classAverage').textContent = stats.classAverage || 0;
+    document.getElementById('passRate').textContent = (stats.passRate || 0) + '%';
+    
+    // Top improvers
+    const topDiv = document.getElementById('topImprovers');
+    if (stats.topImprovers && stats.topImprovers.length > 0) {
+      topDiv.innerHTML = stats.topImprovers.map((s, i) => `
+        <div class="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
+          <span class="font-bold text-indigo-700">${i+1}. ${s.name}</span>
+          <span class="${parseFloat(s.improvement) > 0 ? 'trend-up' : 'trend-down'}">
+            ${parseFloat(s.improvement) > 0 ? '↑' : '↓'} ${Math.abs(s.improvement)} điểm
+          </span>
+        </div>
+      `).join('');
+    } else {
+      topDiv.innerHTML = '<div class="text-gray-500">Chưa có dữ liệu</div>';
+    }
+    
+    // Load students table
+    const studentsRes = await fetch(`${GOOGLE_SCRIPT_URL}?action=allStudentsData`);
+    allStudentsData = await studentsRes.json();
+    renderTable(allStudentsData);
+    
+  } catch (err) {
+    console.error('Lỗi load dashboard:', err);
+    alert('Lỗi tải dữ liệu! Kiểm tra Console.');
+  }
+}
+
+// ========================================
+// RENDER TABLE
+// ========================================
+function renderTable(data) {
+  const tbody = document.getElementById('studentTableBody');
+  
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-gray-500">Chưa có dữ liệu</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = data.map((s, i) => {
+    const trendValue = parseFloat(s.trend);
+    let trendClass = 'trend-neutral';
+    let trendIcon = '→';
+    
+    if (trendValue > 0) {
+      trendClass = 'trend-up';
+      trendIcon = '↑';
+    } else if (trendValue < 0) {
+      trendClass = 'trend-down';
+      trendIcon = '↓';
+    }
+    
+    return `
+      <tr class="${i % 2 === 0 ? 'bg-gray-50' : ''} hover:bg-indigo-50">
+        <td class="p-3 font-bold text-indigo-700">${i + 1}</td>
+        <td class="p-3">${s.code}</td>
+        <td class="p-3 font-semibold">${s.name}</td>
+        <td class="p-3 text-center">${s.target}</td>
+        <td class="p-3 text-center">${s.testCount}</td>
+        <td class="p-3 text-center font-bold text-indigo-700">${s.average}</td>
+        <td class="p-3 text-center text-green-600">${s.highest.toFixed(1)}</td>
+        <td class="p-3 text-center text-red-600">${s.lowest.toFixed(1)}</td>
+        <td class="p-3 text-center ${trendClass}">${trendIcon} ${Math.abs(trendValue)}</td>
+        <td class="p-3 text-center">
+          <button onclick="showDetail('${s.code}')" class="text-indigo-600 hover:text-indigo-800 font-bold">
+            👁️ Xem
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ========================================
+// FILTER TABLE
+// ========================================
+function filterTable() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = allStudentsData.filter(s => 
+    s.name.toLowerCase().includes(searchTerm) || 
+    s.code.toLowerCase().includes(searchTerm)
+  );
+  renderTable(filtered);
+}
+
+// ========================================
+// SHOW STUDENT DETAIL
+// ========================================
+async function showDetail(code) {
+  try {
+    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=studentDetail&code=${encodeURIComponent(code)}`);
+    const data = await res.json();
+    
+    document.getElementById('modalStudentName').textContent = data.history[0]?.name || data.code;
+    document.getElementById('modalStudentCode').textContent = `Mã: ${code}`;
+    
+    // Render history
+    const historyDiv = document.getElementById('historyList');
+    if (data.history && data.history.length > 0) {
+      historyDiv.innerHTML = data.history.map((h, i) => `
+        <div class="border-2 border-indigo-100 rounded-lg p-4">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <span class="font-bold text-indigo-700">Lần ${data.history.length - i}</span>
+              <span class="text-gray-600 text-sm ml-2">${h.timestamp}</span>
+            </div>
+            <span class="bg-indigo-600 text-white px-3 py-1 rounded-full font-bold">${h.score}/10</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-2"><strong>CEFR:</strong> ${h.cefr}</p>
+          <p class="text-sm text-gray-700 mb-2"><strong>Câu hỏi:</strong> ${h.question}</p>
+          <details class="text-sm">
+            <summary class="cursor-pointer text-indigo-600 font-semibold">Xem transcript</summary>
+            <p class="mt-2 p-3 bg-gray-50 rounded">${h.transcript}</p>
+          </details>
+          <p class="text-sm text-gray-800 mt-2"><strong>Phản hồi AI:</strong> ${h.feedback}</p>
+        </div>
+      `).join('');
+    } else {
+      historyDiv.innerHTML = '<div class="text-gray-500">Chưa có bài thi nào</div>';
+    }
+    
+    // Draw chart
+    drawChart(data.history);
+    
+    document.getElementById('detailModal').classList.remove('hidden');
+  } catch (err) {
+    console.error('Lỗi load detail:', err);
+    alert('Lỗi tải chi tiết học sinh!');
+  }
+}
+
+function closeModal() {
+  document.getElementById('detailModal').classList.add('hidden');
+  if (currentChart) currentChart.destroy();
+}
+
+// ========================================
+// DRAW CHART
+// ========================================
+function drawChart(history) {
+  if (currentChart) currentChart.destroy();
+  
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  const labels = history.map((h, i) => `Lần ${history.length - i}`).reverse();
+  const scores = history.map(h => parseFloat(h.score)).reverse();
+  
+  currentChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Điểm số',
+        data: scores,
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `Điểm: ${ctx.parsed.y}/10`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 10,
+          ticks: { stepSize: 1 }
+        }
+      }
+    }
+  });
+}
+
+// ========================================
+// EXPORT EXCEL
+// ========================================
+function exportExcel() {
+  if (!allStudentsData || allStudentsData.length === 0) {
+    alert('Chưa có dữ liệu để xuất!');
+    return;
+  }
+  
+  // Chuẩn bị dữ liệu cho Excel
+  const excelData = allStudentsData.map((s, i) => ({
+    'Hạng': i + 1,
+    'Mã HS': s.code,
+    'Họ tên': s.name,
+    'Target': s.target,
+    'Số bài': s.testCount,
+    'Điểm TB': s.average,
+    'Cao nhất': s.highest.toFixed(1),
+    'Thấp nhất': s.lowest.toFixed(1),
+    'Xu hướng': s.trend
+  }));
+  
+  // Tạo workbook
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(excelData);
+  
+  // Định dạng cột
+  ws['!cols'] = [
+    { wch: 6 },  // Hạng
+    { wch: 10 }, // Mã
+    { wch: 20 }, // Tên
+    { wch: 8 },  // Target
+    { wch: 8 },  // Số bài
+    { wch: 10 }, // TB
+    { wch: 10 }, // Cao nhất
+    { wch: 10 }, // Thấp nhất
+    { wch: 10 }  // Xu hướng
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo');
+  
+  // Xuất file
+  const today = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
+  XLSX.writeFile(wb, `BaoCao_FCE_Speaking_${today}.xlsx`);
+}
+
+// ========================================
+// LOGOUT
+// ========================================
+function logout() {
+  if (confirm('Đăng xuất khỏi Teacher Dashboard?')) {
+    location.reload();
+  }
+}
+</script>
+</body>
+</html>
