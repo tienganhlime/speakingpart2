@@ -308,36 +308,53 @@ function showExam() {
 
 // === ĐĂNG NHẬP ===
 async function verifyStudent() {
-  let code = document.getElementById('studentCode').value;
-  if (!code) return alert('Nhập mã!');
+  const input = document.getElementById('studentCode');
+  let code = input.value;
   
-  code = code.trim().toUpperCase(); // CHỐT: Chuẩn hóa ngay ở frontend!
-
-  const btn = event.target;
-  const original = btn.innerHTML;
+  if (!code) {
+    alert('Vui lòng nhập mã học sinh!');
+    return;
+  }
+  
+  // Chuẩn hóa mã: loại bỏ khoảng trắng, viết hoa
+  code = code.trim().toUpperCase();
+  console.log('Mã sau khi chuẩn hóa:', code); // DEBUG
+  
+  // Tìm button để disable
+  const btn = document.querySelector('#loginScreen button');
+  const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
 
   try {
-    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${encodeURIComponent(code)}`);
+    const url = `${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${encodeURIComponent(code)}`;
+    console.log('Đang gọi API:', url); // DEBUG
+    
+    const res = await fetch(url);
     const data = await res.json();
+    console.log('API trả về:', data); // DEBUG
     
     if (data.exists) {
-      student = { code, name: data.name, target: data.target || 'B1' };
+      student = { 
+        code: code, // Dùng code đã chuẩn hóa
+        name: data.name, 
+        target: data.target || 'B1' 
+      };
       localStorage.setItem('speakingStudent', JSON.stringify(student));
       showExam();
     } else {
-      alert('Mã không tồn tại! Kiểm tra lại: ' + code);
+      alert(`Không tìm thấy mã học sinh: ${code}\n\nVui lòng kiểm tra lại hoặc liên hệ giáo viên.`);
+      input.focus();
+      input.select();
     }
   } catch (err) {
-    console.error('Lỗi fetch:', err);
-    alert('Lỗi kết nối! Kiểm tra mạng hoặc URL script.');
+    console.error('Lỗi kết nối:', err);
+    alert('Lỗi kết nối! Vui lòng:\n• Kiểm tra Internet\n• Thử lại sau vài giây\n• Liên hệ admin nếu lỗi liên tục');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
   }
-  
-  btn.disabled = false;
-  btn.innerHTML = original;
 }
-
 function logout() { localStorage.removeItem('speakingStudent'); location.reload(); }
 
 // === TẢI CÂU HỎI ===
