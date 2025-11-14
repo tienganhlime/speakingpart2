@@ -276,19 +276,53 @@ const questions = [
 ];
 
 // === KHỞI ĐỘNG ===
+// === KHỞI ĐỘNG ===
 function initApp() {
+  console.log('🚀 initApp() được gọi');
   const saved = localStorage.getItem('speakingStudent');
+  console.log('LocalStorage:', saved);
+  
   if (saved) {
     try {
       student = JSON.parse(saved);
-      fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${student.code}`)
-        .then(r => r.json())
-        .then(data => data.exists && data.name === student.name ? showExam() : showLogin())
-        .catch(() => showLogin());
-    } catch { showLogin(); }
-  } else showLogin();
+      console.log('Student từ localStorage:', student);
+      
+      // Kiểm tra lại với server
+      fetch(`${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${encodeURIComponent(student.code)}`)
+        .then(r => {
+          console.log('Response status:', r.status);
+          return r.json();
+        })
+        .then(data => {
+          console.log('Server trả về:', data);
+          if (data.exists) {
+            // Cập nhật thông tin mới nhất từ server
+            student.name = data.name;
+            student.target = data.target || student.target || 'B1';
+            localStorage.setItem('speakingStudent', JSON.stringify(student));
+            showExam();
+          } else {
+            console.warn('Session không hợp lệ, yêu cầu đăng nhập lại');
+            localStorage.removeItem('speakingStudent');
+            showLogin();
+          }
+        })
+        .catch(err => {
+          console.error('Lỗi kiểm tra session:', err);
+          // Nếu lỗi mạng, vẫn cho vào nhưng cảnh báo
+          alert('Không thể kết nối server. Đang dùng dữ liệu offline.');
+          showExam();
+        });
+    } catch (err) {
+      console.error('Lỗi parse localStorage:', err);
+      localStorage.removeItem('speakingStudent');
+      showLogin();
+    }
+  } else {
+    console.log('Chưa có session, hiển thị login');
+    showLogin();
+  }
 }
-
 function showLogin() {
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('examScreen').classList.add('hidden');
