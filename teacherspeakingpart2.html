@@ -107,6 +107,7 @@
             <th class="p-3 text-left">Họ tên</th>
             <th class="p-3 text-center">Target</th>
             <th class="p-3 text-center">Số bài</th>
+            <th class="p-3 text-center">Tổng</th>
             <th class="p-3 text-center">TB</th>
             <th class="p-3 text-center">Cao nhất</th>
             <th class="p-3 text-center">Thấp nhất</th>
@@ -115,7 +116,7 @@
           </tr>
         </thead>
         <tbody id="studentTableBody">
-          <tr><td colspan="10" class="p-6 text-center text-gray-500">Đang tải...</td></tr>
+          <tr><td colspan="11" class="p-6 text-center text-gray-500">Đang tải...</td></tr>
         </tbody>
       </table>
     </div>
@@ -228,7 +229,7 @@ function renderTable(data) {
   const tbody = document.getElementById('studentTableBody');
   
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" class="p-6 text-center text-gray-500">Chưa có dữ liệu</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="p-6 text-center text-gray-500">Chưa có dữ liệu</td></tr>';
     return;
   }
   
@@ -252,6 +253,7 @@ function renderTable(data) {
         <td class="p-3 font-semibold">${s.name}</td>
         <td class="p-3 text-center">${s.target}</td>
         <td class="p-3 text-center">${s.testCount}</td>
+        <td class="p-3 text-center font-bold text-green-600">${s.total ? s.total.toFixed(1) : '0'}</td>
         <td class="p-3 text-center font-bold text-indigo-700">${s.average}</td>
         <td class="p-3 text-center text-green-600">${s.highest.toFixed(1)}</td>
         <td class="p-3 text-center text-red-600">${s.lowest.toFixed(1)}</td>
@@ -418,6 +420,7 @@ function exportExcel() {
     'Họ tên': s.name,
     'Target': s.target,
     'Số bài': s.testCount,
+    'Tổng điểm': s.total ? s.total.toFixed(1) : '0',
     'Điểm TB': s.average,
     'Cao nhất': s.highest.toFixed(1),
     'Thấp nhất': s.lowest.toFixed(1),
@@ -435,6 +438,7 @@ function exportExcel() {
     { wch: 20 }, // Tên
     { wch: 8 },  // Target
     { wch: 8 },  // Số bài
+    { wch: 10 }, // Tổng
     { wch: 10 }, // TB
     { wch: 10 }, // Cao nhất
     { wch: 10 }, // Thấp nhất
