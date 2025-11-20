@@ -73,10 +73,20 @@
       <div class="images mb-6" id="images"></div>
       <p class="text-lg font-semibold text-indigo-800 mb-6 p-4 bg-indigo-50 rounded-lg" id="question"></p>
 
+      <!-- YÊU CẦU BÀI THI -->
+      <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
+        <p class="text-yellow-800 font-semibold mb-2">⚠️ Yêu cầu để gửi bài:</p>
+        <ul class="text-yellow-700 text-sm space-y-1">
+          <li>✓ Thời gian nói: <strong>Tối thiểu 60 giây</strong></li>
+          <li>✓ Số từ: <strong>Tối thiểu 100 từ</strong></li>
+          <li>✓ Chỉ được gửi AI chấm <strong>1 lần duy nhất</strong></li>
+        </ul>
+      </div>
+
       <div class="flex gap-3 flex-wrap mb-4">
         <button id="startBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">Bắt đầu ghi âm</button>
-        <button id="stopBtn" disabled class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg">Dừng</button>
-        <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">Gửi AI chấm</button>
+        <button id="stopBtn" disabled class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg opacity-50">Dừng</button>
+        <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg opacity-50">Gửi AI chấm</button>
       </div>
 
       <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm" để nói...</div>
@@ -120,8 +130,10 @@
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec';
 
 let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
+let recordingDuration = 0; // THÊM: Biến lưu thời gian ghi âm
+let isSubmitted = false; // THÊM: Biến tracking đã submit chưa
 
-// === 25 CẶP ẢNH (dùng Pexels - ổn định hơn Unsplash) ===
+// === 25 CẶP ẢNH ===
 const questions = [
   {
     img1: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
@@ -250,18 +262,51 @@ const questions = [
   }
 ];
 
+// === THÊM: HÀM ĐẾM SỐ TỪ ===
+function countWords(text) {
+  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+}
+
+// === THÊM: HÀM CẬP NHẬT HIỂN THỊ TRANSCRIPT VỚI THỐNG KÊ ===
+function updateTranscriptDisplay() {
+  const display = document.getElementById('transcript');
+  const wordCount = countWords(transcript);
+  
+  if (transcript) {
+    const meetsWordRequirement = wordCount >= 100;
+    const meetsTimeRequirement = recordingDuration >= 60;
+    
+    display.innerHTML = `
+      <div class="space-y-2">
+        <div class="flex justify-between items-center text-sm">
+          <span class="font-semibold text-gray-700">Transcript:</span>
+          <div class="flex gap-3">
+            <span class="${meetsWordRequirement ? 'text-green-600' : 'text-red-600'} font-bold">
+              ${wordCount}/100 từ ${meetsWordRequirement ? '✅' : '❌'}
+            </span>
+            <span class="${meetsTimeRequirement ? 'text-green-600' : 'text-red-600'} font-bold">
+              ${recordingDuration}/60s ${meetsTimeRequirement ? '✅' : '❌'}
+            </span>
+          </div>
+        </div>
+        <p class="text-gray-800">${transcript}</p>
+      </div>
+    `;
+  } else {
+    display.textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
+  }
+}
+
 // === KHỞI ĐỘNG ===
 function initApp() {
   console.log('🚀 initApp() được gọi');
-  
-  // KHÔNG tự động đăng nhập lại, luôn yêu cầu nhập mã
   localStorage.removeItem('speakingStudent');
   student = {};
   showLogin();
 }
 
 function showLogin() {
-  console.log('📝 Hiển thị màn hình login');
+  console.log('🔐 Hiển thị màn hình login');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('examScreen').classList.add('hidden');
   document.getElementById('leaderboardScreen').classList.add('hidden');
@@ -367,8 +412,10 @@ function startTimer() {
   document.getElementById('timer').className = 'timer text-green-600';
   timerInterval = setInterval(() => {
     timeLeft--;
+    recordingDuration++; // THÊM: Tăng thời gian ghi âm
     const display = `00:${timeLeft.toString().padStart(2, '0')}`;
     document.getElementById('timer').textContent = display;
+    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị real-time
     if (timeLeft <= 0) {
       document.getElementById('timer').textContent = '00:00';
       document.getElementById('timer').className = 'timer text-red-600 font-bold';
@@ -377,14 +424,21 @@ function startTimer() {
     }
   }, 1000);
 }
-function resetTimer() { clearInterval(timerInterval); document.getElementById('timer').textContent = '01:00'; document.getElementById('timer').className = 'timer text-green-600'; }
+function resetTimer() { 
+  clearInterval(timerInterval); 
+  recordingDuration = 0; // THÊM: Reset thời gian ghi âm
+  document.getElementById('timer').textContent = '01:00'; 
+  document.getElementById('timer').className = 'timer text-green-600'; 
+}
 
 // === GHI ÂM ===
 document.getElementById('startBtn').onclick = () => {
   transcript = '';
+  recordingDuration = 0; // THÊM: Reset thời gian
   document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
   document.getElementById('startBtn').disabled = true;
   document.getElementById('stopBtn').disabled = false;
+  document.getElementById('stopBtn').classList.remove('opacity-50');
   document.getElementById('submitBtn').disabled = true;
   startTime = Date.now();
   startTimer();
@@ -395,7 +449,7 @@ document.getElementById('startBtn').onclick = () => {
   recognition.continuous = true;
   recognition.onresult = e => {
     transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-    document.getElementById('transcript').textContent = transcript;
+    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị với số từ
   };
   recognition.start();
 
@@ -406,6 +460,7 @@ document.getElementById('startBtn').onclick = () => {
     mediaRecorder.onstop = () => {
       audioBlob = new Blob(chunks, { type: 'audio/webm' });
       document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').classList.remove('opacity-50');
     };
     mediaRecorder.start();
   }).catch(() => {
@@ -419,11 +474,40 @@ document.getElementById('stopBtn').onclick = () => {
   mediaRecorder?.stop();
   clearInterval(timerInterval);
   document.getElementById('stopBtn').disabled = true;
+  document.getElementById('stopBtn').classList.add('opacity-50');
   document.getElementById('submitBtn').disabled = false;
+  document.getElementById('submitBtn').classList.remove('opacity-50');
+  updateTranscriptDisplay(); // THÊM: Cập nhật lần cuối
 };
 
 // === GỬI + LẤY KẾT QUẢ ===
 document.getElementById('submitBtn').onclick = async () => {
+  // THÊM: KIỂM TRA ĐÃ SUBMIT CHƯA
+  if (isSubmitted) {
+    alert('⚠️ Bạn đã gửi bài rồi! Không thể gửi lại.\n\nNhấn "Làm bài mới" để làm bài khác.');
+    return;
+  }
+  
+  // THÊM: KIỂM TRA ĐIỀU KIỆN 60s + 100 TỪ
+  const wordCount = countWords(transcript);
+  
+  if (recordingDuration < 60) {
+    alert(`⚠️ BÀI NÓI PHẢI TỪ 60 GIÂY TRỞ LÊN!\n\nHiện tại: ${recordingDuration} giây\nCần thêm: ${60 - recordingDuration} giây`);
+    return;
+  }
+  
+  if (wordCount < 100) {
+    alert(`⚠️ BÀI NÓI PHẢI CÓ ÍT NHẤT 100 TỪ!\n\nHiện tại: ${wordCount} từ\nCần thêm: ${100 - wordCount} từ`);
+    return;
+  }
+  
+  // THÊM: DISABLE NÚT VÀ ĐÁNH DẤU ĐÃ SUBMIT
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.classList.add('opacity-50');
+  submitBtn.innerHTML = '<div class="spinner"></div> Đang gửi...';
+  isSubmitted = true;
+  
   const duration = Math.round((Date.now() - startTime) / 1000);
   const saveAudio = document.getElementById('saveAudio').checked;
 
@@ -447,7 +531,7 @@ document.getElementById('submitBtn').onclick = async () => {
   document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>Đang gửi bài thi...</span></div>';
 
   try {
-    // GỬI POST với no-cors (không đọc được response nhưng vẫn gửi thành công)
+    // GỬI POST với no-cors
     await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -518,8 +602,9 @@ document.getElementById('submitBtn').onclick = async () => {
       <div class="bg-red-50 p-6 rounded-lg border-2 border-red-200">
         <h3 class="text-xl font-bold text-red-700 mb-2">❌ Lỗi kết nối</h3>
         <p class="text-red-800 mb-2">${err.message}</p>
-        <button onclick="document.getElementById('submitBtn').click()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg">
-          Thử lại
+        <p class="text-red-700 text-sm">Bài của bạn có thể đã được gửi. Kiểm tra bảng xếp hạng để chắc chắn.</p>
+        <button onclick="showLeaderboard()" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg">
+          Kiểm tra bảng xếp hạng
         </button>
       </div>
     `;
@@ -558,10 +643,18 @@ function hideLeaderboard() {
 }
 
 function restartExam() {
+  // THÊM: RESET TRẠNG THÁI SUBMIT
+  isSubmitted = false;
+  transcript = '';
+  recordingDuration = 0;
+  
   loadQuestion();
   document.getElementById('result').innerHTML = '';
   document.getElementById('transcript').textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
   document.getElementById('startBtn').disabled = false;
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').classList.add('opacity-50');
+  document.getElementById('submitBtn').innerHTML = 'Gửi AI chấm';
   resetTimer();
 }
 
