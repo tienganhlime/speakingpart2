@@ -432,18 +432,10 @@ function resetTimer() {
 }
 
 // === GHI ÂM ===
-// === GHI ÂM ===
-document.getElementById('startBtn').onclick = async () => {
-  // KIỂM TRA HỖ TRỢ
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert('❌ Trình duyệt này KHÔNG hỗ trợ Speech Recognition!\n\nVui lòng dùng Chrome hoặc Safari.');
-    return;
-  }
-  
+document.getElementById('startBtn').onclick = () => {
   transcript = '';
-  recordingDuration = 0;
-  document.getElementById('transcript').textContent = 'Đang khởi động...';
+  recordingDuration = 0; // THÊM: Reset thời gian
+  document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
   document.getElementById('startBtn').disabled = true;
   document.getElementById('stopBtn').disabled = false;
   document.getElementById('stopBtn').classList.remove('opacity-50');
@@ -451,70 +443,17 @@ document.getElementById('startBtn').onclick = async () => {
   startTime = Date.now();
   startTimer();
 
-  try {
-    // XIN QUYỀN MICRO TRƯỚC
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    
-    // SAU ĐÓ MỚI BẬT RECOGNITION
-    recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    
-    recognition.onstart = () => {
-      console.log('✅ Recognition started');
-      document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
-    };
-    
-    recognition.onresult = e => {
-      transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-      updateTranscriptDisplay();
-    };
-    
-    recognition.onerror = (e) => {
-  console.error('❌ Error:', e.error);
-  // BỎ QUA CÁC LỖI THƯỜNG GẶP TRÊN MOBILE
-  if (e.error === 'no-speech' || e.error === 'aborted') {
-    console.log('Bỏ qua lỗi:', e.error);
-    // Không làm gì, để onend tự restart
-  } else if (e.error === 'not-allowed') {
-    alert('❌ Quyền microphone bị từ chối!');
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
-    clearInterval(timerInterval);
-  } else {
-    console.log('Lỗi khác:', e.error);
-  }
-};
-    
-    recognition.onend = () => {
-      if (!document.getElementById('stopBtn').disabled) {
-        setTimeout(() => {
-          try { recognition.start(); } catch(e) {}
-        }, 100);
-      }
-    };
-    
-    recognition.start();
-recognition.onaudiostart = () => {
-  console.log('✅ Microphone đang hoạt động');
-  document.getElementById('transcript').textContent = '✅ Micro hoạt động - Hãy nói!';
-};
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-GB';
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.onresult = e => {
+    transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
+    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị với số từ
+  };
+  recognition.start();
 
-recognition.onaudioend = () => {
-  console.log('⚠️ Microphone ngừng nhận âm thanh');
-};
-
-recognition.onspeechstart = () => {
-  console.log('🎤 Phát hiện giọng nói!');
-};
-
-recognition.onspeechend = () => {
-  console.log('🔇 Giọng nói kết thúc');
-};
-
-navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    // GHI ÂM
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
     const chunks = [];
     mediaRecorder.ondataavailable = e => chunks.push(e.data);
@@ -524,13 +463,10 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       document.getElementById('submitBtn').classList.remove('opacity-50');
     };
     mediaRecorder.start();
-    
-  } catch(err) {
-    alert('Không truy cập được micro: ' + err.message);
+  }).catch(() => {
+    alert('Cần cấp quyền micro!');
     document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
-    clearInterval(timerInterval);
-  }
+  });
 };
 
 document.getElementById('stopBtn').onclick = () => {
@@ -727,6 +663,3 @@ initApp();
 </script>
 </body>
 </html>
-
-
-
