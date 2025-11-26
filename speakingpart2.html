@@ -424,6 +424,7 @@ function resetTimer() {
 // === GHI ÂM - VERSION FIXED ===
 document.getElementById('startBtn').onclick = () => {
   transcript = '';
+finalTranscript = '';
   recordingDuration = 0;
   document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
   document.getElementById('startBtn').disabled = true;
@@ -436,21 +437,29 @@ document.getElementById('startBtn').onclick = () => {
   recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.lang = 'en-GB';
   recognition.interimResults = true;
-  recognition.continuous = false; // ← FIX: false cho ổn định
+  recognition.continuous = true; // ← FIX: false cho ổn định
   
-  recognition.onresult = e => {
-    transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-    updateTranscriptDisplay();
-  };
+ let finalTranscript = ''; // Thêm biến này TRƯỚC recognition.onresult
+
+recognition.onresult = e => {
+  let interimTranscript = '';
   
-  // ← FIX: Auto-restart để giống continuous
-  recognition.onend = () => {
-    if (!document.getElementById('stopBtn').disabled) {
-      setTimeout(() => {
-        try { recognition.start(); } catch(e) { console.log('Restart:', e); }
-      }, 100);
+  for (let i = e.resultIndex; i < e.results.length; i++) {
+    const transcriptPiece = e.results[i][0].transcript;
+    if (e.results[i].isFinal) {
+      finalTranscript += transcriptPiece + ' ';
+    } else {
+      interimTranscript += transcriptPiece;
     }
-  };
+  }
+  
+  transcript = (finalTranscript + interimTranscript).trim();
+  updateTranscriptDisplay();
+};
+  
+  recognition.onend = () => {
+  console.log('Recognition ended');
+};
   
   recognition.start();
 
@@ -644,6 +653,7 @@ function hideLeaderboard() {
 
 function restartExam() {
   // RESET TRẠNG THÁI
+finalTranscript = '';
   isSubmitted = false;
   transcript = '';
   recordingDuration = 0;
