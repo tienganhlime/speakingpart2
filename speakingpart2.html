@@ -132,6 +132,7 @@ const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewF
 let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
 let recordingDuration = 0;
 let isSubmitted = false;
+let finalTranscript = '';
 
 // === 25 CẶP ẢNH ===
 const questions = [
@@ -424,7 +425,7 @@ function resetTimer() {
 // === GHI ÂM - VERSION FIXED ===
 document.getElementById('startBtn').onclick = () => {
   transcript = '';
-finalTranscript = '';
+  finalTranscript = '';
   recordingDuration = 0;
   document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
   document.getElementById('startBtn').disabled = true;
@@ -438,8 +439,6 @@ finalTranscript = '';
   recognition.lang = 'en-GB';
   recognition.interimResults = true;
   recognition.continuous = true; // ← FIX: false cho ổn định
-  
- let finalTranscript = ''; // Thêm biến này TRƯỚC recognition.onresult
 
 recognition.onresult = e => {
   let interimTranscript = '';
