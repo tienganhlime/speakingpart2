@@ -73,20 +73,10 @@
       <div class="images mb-6" id="images"></div>
       <p class="text-lg font-semibold text-indigo-800 mb-6 p-4 bg-indigo-50 rounded-lg" id="question"></p>
 
-      <!-- YÊU CẦU BÀI THI -->
-      <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
-        <p class="text-yellow-800 font-semibold mb-2">⚠️ Yêu cầu để gửi bài:</p>
-        <ul class="text-yellow-700 text-sm space-y-1">
-          <li>✓ Thời gian nói: <strong>Tối thiểu 60 giây</strong></li>
-          <li>✓ Số từ: <strong>Tối thiểu 100 từ</strong></li>
-          <li>✓ Chỉ được gửi AI chấm <strong>1 lần duy nhất</strong></li>
-        </ul>
-      </div>
-
       <div class="flex gap-3 flex-wrap mb-4">
         <button id="startBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">Bắt đầu ghi âm</button>
-        <button id="stopBtn" disabled class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg opacity-50">Dừng</button>
-        <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg opacity-50">Gửi AI chấm</button>
+        <button id="stopBtn" disabled class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg">Dừng</button>
+        <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg">Gửi AI chấm</button>
       </div>
 
       <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm" để nói...</div>
@@ -130,10 +120,8 @@
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec';
 
 let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
-let recordingDuration = 0; // THÊM: Biến lưu thời gian ghi âm
-let isSubmitted = false; // THÊM: Biến tracking đã submit chưa
 
-// === 25 CẶP ẢNH ===
+// === 25 CẶP ẢNH (dùng Pexels - ổn định hơn Unsplash) ===
 const questions = [
   {
     img1: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
@@ -262,51 +250,18 @@ const questions = [
   }
 ];
 
-// === THÊM: HÀM ĐẾM SỐ TỪ ===
-function countWords(text) {
-  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-}
-
-// === THÊM: HÀM CẬP NHẬT HIỂN THỊ TRANSCRIPT VỚI THỐNG KÊ ===
-function updateTranscriptDisplay() {
-  const display = document.getElementById('transcript');
-  const wordCount = countWords(transcript);
-  
-  if (transcript) {
-    const meetsWordRequirement = wordCount >= 100;
-    const meetsTimeRequirement = recordingDuration >= 60;
-    
-    display.innerHTML = `
-      <div class="space-y-2">
-        <div class="flex justify-between items-center text-sm">
-          <span class="font-semibold text-gray-700">Transcript:</span>
-          <div class="flex gap-3">
-            <span class="${meetsWordRequirement ? 'text-green-600' : 'text-red-600'} font-bold">
-              ${wordCount}/100 từ ${meetsWordRequirement ? '✅' : '❌'}
-            </span>
-            <span class="${meetsTimeRequirement ? 'text-green-600' : 'text-red-600'} font-bold">
-              ${recordingDuration}/60s ${meetsTimeRequirement ? '✅' : '❌'}
-            </span>
-          </div>
-        </div>
-        <p class="text-gray-800">${transcript}</p>
-      </div>
-    `;
-  } else {
-    display.textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
-  }
-}
-
 // === KHỞI ĐỘNG ===
 function initApp() {
   console.log('🚀 initApp() được gọi');
+  
+  // KHÔNG tự động đăng nhập lại, luôn yêu cầu nhập mã
   localStorage.removeItem('speakingStudent');
   student = {};
   showLogin();
 }
 
 function showLogin() {
-  console.log('🔐 Hiển thị màn hình login');
+  console.log('📝 Hiển thị màn hình login');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('examScreen').classList.add('hidden');
   document.getElementById('leaderboardScreen').classList.add('hidden');
@@ -412,10 +367,8 @@ function startTimer() {
   document.getElementById('timer').className = 'timer text-green-600';
   timerInterval = setInterval(() => {
     timeLeft--;
-    recordingDuration++; // THÊM: Tăng thời gian ghi âm
     const display = `00:${timeLeft.toString().padStart(2, '0')}`;
     document.getElementById('timer').textContent = display;
-    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị real-time
     if (timeLeft <= 0) {
       document.getElementById('timer').textContent = '00:00';
       document.getElementById('timer').className = 'timer text-red-600 font-bold';
@@ -424,455 +377,14 @@ function startTimer() {
     }
   }, 1000);
 }
-function resetTimer() { 
-  clearInterval(timerInterval); 
-  recordingDuration = 0; // THÊM: Reset thời gian ghi âm
-  document.getElementById('timer').textContent = '01:00'; 
-  document.getElementById('timer').className = 'timer text-green-600'; 
-}
-
-// === GHI ÂM ===
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>FCE Speaking Part 2 - LIME</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%); min-height: 100vh; }
-    .fade-in { animation: fadeIn 0.5s ease-in; } @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .spinner { border: 3px solid #f3f3f3; border-top: 3px solid #4CAF50; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .hidden { display: none; }
-    .images { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-    .images img { width: 45%; min-width: 200px; max-width: 400px; height: auto; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); object-fit: cover; }
-    .timer { font-size: 1.5em; font-weight: bold; color: #dc2626; }
-    .small-btn { @apply px-3 py-1 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white rounded-lg; }
-    .placeholder-img { background: #e5e7eb; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 14px; }
-  </style>
-</head>
-<body class="p-4">
-<div id="app" class="max-w-4xl mx-auto">
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen" class="min-h-screen fade-in">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 mt-8">
-      <div class="text-center mb-8">
-        <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-32 h-32 mx-auto mb-4 object-contain">
-        <h1 class="text-4xl font-bold text-green-700 mb-2">Trung Tâm Tiếng Anh LIME</h1>
-        <p class="text-green-600 text-lg">Hotline: 0976222792</p>
-        <div class="mt-4 h-1 w-32 bg-green-500 mx-auto rounded"></div>
-      </div>
-      <div class="bg-green-50 rounded-xl p-6 mb-6">
-        <h2 class="text-2xl font-bold text-green-800 mb-4">FCE SPEAKING PART 2</h2>
-        <p class="text-green-700">So sánh 2 ảnh + trả lời câu hỏi trong 1 phút</p>
-        <p class="text-green-700">AI chấm theo FCE rubric</p>
-        <p class="text-green-700">Leaderboard: Tổng điểm + Trung bình</p>
-      </div>
-      <label class="block text-green-800 font-semibold mb-2">Mã học sinh *</label>
-      <input type="text" id="studentCode" class="w-full px-4 py-3 border-2 border-green-300 rounded-lg uppercase text-lg" placeholder="VD: HS001" />
-      <button onclick="verifyStudent()" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg text-lg shadow-lg">
-        XÁC NHẬN & BẮT ĐẦU
-      </button>
-    </div>
-  </div>
-
-  <!-- EXAM SCREEN -->
-  <div id="examScreen" class="hidden min-h-screen pb-20">
-    <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10">
-      <div class="flex justify-between items-center flex-wrap gap-4">
-        <div class="flex items-center gap-3">
-          <img src="https://gofirst.pro/images/uploads/62/baseimg/logo_16541442053.png" alt="LIME" class="w-12 h-12 object-contain">
-          <div>
-            <h1 class="text-2xl font-bold text-green-700">FCE Speaking Part 2</h1>
-            <p class="text-green-600 text-sm">Xin chào, <span id="studentName"></span>!</p>
-          </div>
-        </div>
-        <div class="text-right">
-          <p class="text-sm text-gray-600">Mã: <span id="headerCode"></span></p>
-          <p class="text-sm text-gray-600">Mục tiêu: <span id="targetLevel"></span></p>
-          <div class="timer" id="timer">01:00</div>
-        </div>
-      </div>
-      <div class="mt-4 flex gap-2 justify-end">
-        <button onclick="showLeaderboard()" class="small-btn">Bảng xếp hạng</button>
-        <button onclick="logout()" class="small-btn">Đăng xuất</button>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-2xl shadow-2xl p-8 mb-6 fade-in">
-      <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-4 rounded-t-xl -mx-8 -mt-8 mb-6">
-        <h2 class="text-2xl font-bold">So sánh 2 bức tranh</h2>
-      </div>
-      <div class="images mb-6" id="images"></div>
-      <p class="text-lg font-semibold text-indigo-800 mb-6 p-4 bg-indigo-50 rounded-lg" id="question"></p>
-
-      <!-- YÊU CẦU BÀI THI -->
-      <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
-        <p class="text-yellow-800 font-semibold mb-2">⚠️ Yêu cầu để gửi bài:</p>
-        <ul class="text-yellow-700 text-sm space-y-1">
-          <li>✓ Thời gian nói: <strong>Tối thiểu 60 giây</strong></li>
-          <li>✓ Số từ: <strong>Tối thiểu 100 từ</strong></li>
-          <li>✓ Chỉ được gửi AI chấm <strong>1 lần duy nhất</strong></li>
-        </ul>
-      </div>
-
-      <div class="flex gap-3 flex-wrap mb-4">
-        <button id="startBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">Bắt đầu ghi âm</button>
-        <button id="stopBtn" disabled class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg opacity-50">Dừng</button>
-        <button id="submitBtn" disabled class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg opacity-50">Gửi AI chấm</button>
-      </div>
-
-      <div class="mt-6 p-4 bg-gray-50 rounded-lg" id="transcript">Nhấn "Bắt đầu ghi âm" để nói...</div>
-      <div id="result" class="mt-6"></div>
-
-      <label class="flex items-center gap-2 mt-6 text-gray-700">
-        <input type="checkbox" id="saveAudio" checked /> Lưu audio?
-      </label>
-
-      <button onclick="restartExam()" class="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 rounded-lg">
-        Làm bài mới
-      </button>
-    </div>
-  </div>
-
-  <!-- LEADERBOARD -->
-  <div id="leaderboardScreen" class="hidden min-h-screen pb-20">
-    <div class="bg-white rounded-2xl shadow-2xl p-6 mb-6 sticky top-4 z-10 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-green-700">BẢNG XẾP HẠNG</h1>
-      <button onclick="hideLeaderboard()" class="small-btn">Quay lại</button>
-    </div>
-    <div class="bg-white rounded-2xl shadow-2xl p-6 overflow-x-auto">
-      <table class="w-full table-auto border-collapse">
-        <thead>
-          <tr class="bg-green-100 text-green-800">
-            <th class="p-3 text-left">Hạng</th>
-            <th class="p-3 text-left">Học sinh</th>
-            <th class="p-3 text-center">Tổng điểm</th>
-            <th class="p-3 text-center">Số bài</th>
-            <th class="p-3 text-center">Trung bình</th>
-          </tr>
-        </thead>
-        <tbody id="leaderboardBody"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<script>
-// === CẤU HÌNH ===
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec';
-
-let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
-let recordingDuration = 0; // THÊM: Biến lưu thời gian ghi âm
-let isSubmitted = false; // THÊM: Biến tracking đã submit chưa
-
-// === 25 CẶP ẢNH ===
-const questions = [
-  {
-    img1: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1181622/pexels-photo-1181622.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why teamwork might be important in these situations."
-  },
-  {
-    img1: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people might be feeling."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1327430/pexels-photo-1327430.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/3822843/pexels-photo-3822843.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say what kind of music the people might be listening to."
-  },
-  {
-    img1: "https://images.pexels.com/photos/869258/pexels-photo-869258.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1365425/pexels-photo-1365425.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why the people might have chosen these activities."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people might be feeling about their appearance."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1729931/pexels-photo-1729931.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1157557/pexels-photo-1157557.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say what the people might be celebrating."
-  },
-  {
-    img1: "https://images.pexels.com/photos/544965/pexels-photo-544965.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1127119/pexels-photo-1127119.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why the people might be using these forms of transport."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3184339/pexels-photo-3184339.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1181467/pexels-photo-1181467.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how technology might be helping the people in their work."
-  },
-  {
-    img1: "https://images.pexels.com/photos/5632382/pexels-photo-5632382.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1005638/pexels-photo-1005638.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say what the people might be buying and why."
-  },
-  {
-    img1: "https://images.pexels.com/photos/5212317/pexels-photo-5212317.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/5905857/pexels-photo-5905857.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people might be learning in these situations."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1264210/pexels-photo-1264210.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1194420/pexels-photo-1194420.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why the people might be taking these photos."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3766180/pexels-photo-3766180.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/6551415/pexels-photo-6551415.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people might be relaxing."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1441151/pexels-photo-1441151.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1130857/pexels-photo-1130857.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the weather might be affecting the people."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3338681/pexels-photo-3338681.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1251208/pexels-photo-1251208.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why the people might have chosen these foods."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/3775164/pexels-photo-3775164.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say what the advantages might be of these activities."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1010657/pexels-photo-1010657.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/2739666/pexels-photo-2739666.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why the people might prefer these places."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3747435/pexels-photo-3747435.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/3825517/pexels-photo-3825517.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say what the people might be reading about."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1648387/pexels-photo-1648387.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/3768114/pexels-photo-3768114.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why these moments might be important."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3778403/pexels-photo-3778403.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/2247678/pexels-photo-2247678.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people might be expressing themselves."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1402850/pexels-photo-1402850.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how being in nature might affect the people."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/5212339/pexels-photo-5212339.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people are communicating."
-  },
-  {
-    img1: "https://images.pexels.com/photos/4498185/pexels-photo-4498185.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/5731796/pexels-photo-5731796.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why people might enjoy these activities with animals."
-  },
-  {
-    img1: "https://images.pexels.com/photos/3184436/pexels-photo-3184436.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/1643383/pexels-photo-1643383.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say what challenges the people might face in these environments."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1267697/pexels-photo-1267697.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say why these forms of entertainment might appeal to people."
-  },
-  {
-    img1: "https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    img2: "https://images.pexels.com/photos/3184423/pexels-photo-3184423.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
-    question: "Compare the two pictures and say how the people might be feeling about their achievements."
-  }
-];
-
-// === THÊM: HÀM ĐẾM SỐ TỪ ===
-function countWords(text) {
-  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-}
-
-// === THÊM: HÀM CẬP NHẬT HIỂN THỊ TRANSCRIPT VỚI THỐNG KÊ ===
-function updateTranscriptDisplay() {
-  const display = document.getElementById('transcript');
-  const wordCount = countWords(transcript);
-  
-  if (transcript) {
-    const meetsWordRequirement = wordCount >= 100;
-    const meetsTimeRequirement = recordingDuration >= 60;
-    
-    display.innerHTML = `
-      <div class="space-y-2">
-        <div class="flex justify-between items-center text-sm">
-          <span class="font-semibold text-gray-700">Transcript:</span>
-          <div class="flex gap-3">
-            <span class="${meetsWordRequirement ? 'text-green-600' : 'text-red-600'} font-bold">
-              ${wordCount}/100 từ ${meetsWordRequirement ? '✅' : '❌'}
-            </span>
-            <span class="${meetsTimeRequirement ? 'text-green-600' : 'text-red-600'} font-bold">
-              ${recordingDuration}/60s ${meetsTimeRequirement ? '✅' : '❌'}
-            </span>
-          </div>
-        </div>
-        <p class="text-gray-800">${transcript}</p>
-      </div>
-    `;
-  } else {
-    display.textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
-  }
-}
-
-// === KHỞI ĐỘNG ===
-function initApp() {
-  console.log('🚀 initApp() được gọi');
-  localStorage.removeItem('speakingStudent');
-  student = {};
-  showLogin();
-}
-
-function showLogin() {
-  console.log('🔐 Hiển thị màn hình login');
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('examScreen').classList.add('hidden');
-  document.getElementById('leaderboardScreen').classList.add('hidden');
-  document.getElementById('studentCode').value = '';
-  document.getElementById('studentCode').focus();
-}
-
-function showExam() {
-  console.log('📚 Hiển thị màn hình thi');
-  console.log('Student hiện tại:', student);
-  
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('examScreen').classList.remove('hidden');
-  document.getElementById('leaderboardScreen').classList.add('hidden');
-  
-  document.getElementById('studentName').textContent = student.name || 'N/A';
-  document.getElementById('headerCode').textContent = student.code || 'N/A';
-  document.getElementById('targetLevel').textContent = student.target || 'B1';
-  
-  loadQuestion();
-  resetTimer();
-}
-
-// === ĐĂNG NHẬP ===
-async function verifyStudent() {
-  const input = document.getElementById('studentCode');
-  let code = input.value;
-  
-  if (!code) {
-    alert('Vui lòng nhập mã học sinh!');
-    input.focus();
-    return;
-  }
-  
-  code = code.trim().toUpperCase();
-  console.log('🔍 Đang xác thực mã:', code);
-  
-  const btn = document.querySelector('#loginScreen button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Đang xác nhận...';
-
-  try {
-    const url = `${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${encodeURIComponent(code)}`;
-    console.log('📡 Gọi API:', url);
-    
-    const res = await fetch(url);
-    
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-    
-    const data = await res.json();
-    console.log('✅ API trả về:', data);
-    
-    if (data.exists) {
-      student = { 
-        code: code,
-        name: data.name, 
-        target: data.target || 'B1' 
-      };
-      console.log('💾 Lưu student:', student);
-      localStorage.setItem('speakingStudent', JSON.stringify(student));
-      
-      btn.innerHTML = '✓ Thành công!';
-      setTimeout(() => showExam(), 500);
-    } else {
-      alert(`❌ Không tìm thấy mã học sinh: ${code}\n\nVui lòng kiểm tra lại hoặc liên hệ giáo viên.`);
-      input.focus();
-      input.select();
-    }
-  } catch (err) {
-    console.error('❌ Lỗi:', err);
-    alert(`Lỗi kết nối!\n\n${err.message}\n\nVui lòng:\n• Kiểm tra Internet\n• Thử lại sau\n• Liên hệ admin nếu lỗi liên tục`);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-}
-
-function logout() { 
-  console.log('👋 Đăng xuất');
-  localStorage.removeItem('speakingStudent'); 
-  student = {};
-  location.reload(); 
-}
-
-// === TẢI CÂU HỎI ===
-function loadQuestion() {
-  const q = questions[Math.floor(Math.random() * questions.length)];
-  document.getElementById('images').innerHTML = `
-    <img src="${q.img1}" alt="1" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
-    <img src="${q.img2}" alt="2" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
-  `;
-  document.getElementById('question').textContent = q.question;
-  currentQuestion = q.question;
-}
-
-// === TIMER ===
-function startTimer() {
-  timeLeft = 60;
-  document.getElementById('timer').textContent = '01:00';
-  document.getElementById('timer').className = 'timer text-green-600';
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    recordingDuration++; // THÊM: Tăng thời gian ghi âm
-    const display = `00:${timeLeft.toString().padStart(2, '0')}`;
-    document.getElementById('timer').textContent = display;
-    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị real-time
-    if (timeLeft <= 0) {
-      document.getElementById('timer').textContent = '00:00';
-      document.getElementById('timer').className = 'timer text-red-600 font-bold';
-      document.getElementById('timer').innerHTML += ' <span class="text-sm">(Quá giờ!)</span>';
-      clearInterval(timerInterval);
-    }
-  }, 1000);
-}
-function resetTimer() { 
-  clearInterval(timerInterval); 
-  recordingDuration = 0; // THÊM: Reset thời gian ghi âm
-  document.getElementById('timer').textContent = '01:00'; 
-  document.getElementById('timer').className = 'timer text-green-600'; 
-}
+function resetTimer() { clearInterval(timerInterval); document.getElementById('timer').textContent = '01:00'; document.getElementById('timer').className = 'timer text-green-600'; }
 
 // === GHI ÂM ===
 document.getElementById('startBtn').onclick = () => {
   transcript = '';
-  recordingDuration = 0;
   document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
   document.getElementById('startBtn').disabled = true;
   document.getElementById('stopBtn').disabled = false;
-  document.getElementById('stopBtn').classList.remove('opacity-50');
   document.getElementById('submitBtn').disabled = true;
   startTime = Date.now();
   startTimer();
@@ -880,22 +392,11 @@ document.getElementById('startBtn').onclick = () => {
   recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.lang = 'en-GB';
   recognition.interimResults = true;
-  recognition.continuous = false; // ← ĐỔI TỪ true THÀNH false
-  
+  recognition.continuous = true;
   recognition.onresult = e => {
     transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-    updateTranscriptDisplay();
+    document.getElementById('transcript').textContent = transcript;
   };
-  
-  // ← THÊM ĐOẠN NÀY
-  recognition.onend = () => {
-    if (!document.getElementById('stopBtn').disabled) {
-      setTimeout(() => {
-        try { recognition.start(); } catch(e) {}
-      }, 100);
-    }
-  };
-  
   recognition.start();
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
@@ -905,7 +406,6 @@ document.getElementById('startBtn').onclick = () => {
     mediaRecorder.onstop = () => {
       audioBlob = new Blob(chunks, { type: 'audio/webm' });
       document.getElementById('submitBtn').disabled = false;
-      document.getElementById('submitBtn').classList.remove('opacity-50');
     };
     mediaRecorder.start();
   }).catch(() => {
@@ -919,40 +419,11 @@ document.getElementById('stopBtn').onclick = () => {
   mediaRecorder?.stop();
   clearInterval(timerInterval);
   document.getElementById('stopBtn').disabled = true;
-  document.getElementById('stopBtn').classList.add('opacity-50');
   document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').classList.remove('opacity-50');
-  updateTranscriptDisplay(); // THÊM: Cập nhật lần cuối
 };
 
 // === GỬI + LẤY KẾT QUẢ ===
 document.getElementById('submitBtn').onclick = async () => {
-  // THÊM: KIỂM TRA ĐÃ SUBMIT CHƯA
-  if (isSubmitted) {
-    alert('⚠️ Bạn đã gửi bài rồi! Không thể gửi lại.\n\nNhấn "Làm bài mới" để làm bài khác.');
-    return;
-  }
-  
-  // THÊM: KIỂM TRA ĐIỀU KIỆN 60s + 100 TỪ
-  const wordCount = countWords(transcript);
-  
-  if (recordingDuration < 60) {
-    alert(`⚠️ BÀI NÓI PHẢI TỪ 60 GIÂY TRỞ LÊN!\n\nHiện tại: ${recordingDuration} giây\nCần thêm: ${60 - recordingDuration} giây`);
-    return;
-  }
-  
-  if (wordCount < 100) {
-    alert(`⚠️ BÀI NÓI PHẢI CÓ ÍT NHẤT 100 TỪ!\n\nHiện tại: ${wordCount} từ\nCần thêm: ${100 - wordCount} từ`);
-    return;
-  }
-  
-  // THÊM: DISABLE NÚT VÀ ĐÁNH DẤU ĐÃ SUBMIT
-  const submitBtn = document.getElementById('submitBtn');
-  submitBtn.disabled = true;
-  submitBtn.classList.add('opacity-50');
-  submitBtn.innerHTML = '<div class="spinner"></div> Đang gửi...';
-  isSubmitted = true;
-  
   const duration = Math.round((Date.now() - startTime) / 1000);
   const saveAudio = document.getElementById('saveAudio').checked;
 
@@ -976,7 +447,7 @@ document.getElementById('submitBtn').onclick = async () => {
   document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>Đang gửi bài thi...</span></div>';
 
   try {
-    // GỬI POST với no-cors
+    // GỬI POST với no-cors (không đọc được response nhưng vẫn gửi thành công)
     await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'no-cors',
@@ -1047,9 +518,8 @@ document.getElementById('submitBtn').onclick = async () => {
       <div class="bg-red-50 p-6 rounded-lg border-2 border-red-200">
         <h3 class="text-xl font-bold text-red-700 mb-2">❌ Lỗi kết nối</h3>
         <p class="text-red-800 mb-2">${err.message}</p>
-        <p class="text-red-700 text-sm">Bài của bạn có thể đã được gửi. Kiểm tra bảng xếp hạng để chắc chắn.</p>
-        <button onclick="showLeaderboard()" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg">
-          Kiểm tra bảng xếp hạng
+        <button onclick="document.getElementById('submitBtn').click()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg">
+          Thử lại
         </button>
       </div>
     `;
@@ -1088,18 +558,10 @@ function hideLeaderboard() {
 }
 
 function restartExam() {
-  // THÊM: RESET TRẠNG THÁI SUBMIT
-  isSubmitted = false;
-  transcript = '';
-  recordingDuration = 0;
-  
   loadQuestion();
   document.getElementById('result').innerHTML = '';
   document.getElementById('transcript').textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
   document.getElementById('startBtn').disabled = false;
-  document.getElementById('submitBtn').disabled = true;
-  document.getElementById('submitBtn').classList.add('opacity-50');
-  document.getElementById('submitBtn').innerHTML = 'Gửi AI chấm';
   resetTimer();
 }
 
@@ -1107,200 +569,4 @@ function restartExam() {
 initApp();
 </script>
 </body>
-</html>
-
-document.getElementById('stopBtn').onclick = () => {
-  recognition?.stop();
-  mediaRecorder?.stop();
-  clearInterval(timerInterval);
-  document.getElementById('stopBtn').disabled = true;
-  document.getElementById('stopBtn').classList.add('opacity-50');
-  document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').classList.remove('opacity-50');
-  updateTranscriptDisplay(); // THÊM: Cập nhật lần cuối
-};
-
-// === GỬI + LẤY KẾT QUẢ ===
-document.getElementById('submitBtn').onclick = async () => {
-  // THÊM: KIỂM TRA ĐÃ SUBMIT CHƯA
-  if (isSubmitted) {
-    alert('⚠️ Bạn đã gửi bài rồi! Không thể gửi lại.\n\nNhấn "Làm bài mới" để làm bài khác.');
-    return;
-  }
-  
-  // THÊM: KIỂM TRA ĐIỀU KIỆN 60s + 100 TỪ
-  const wordCount = countWords(transcript);
-  
-  if (recordingDuration < 60) {
-    alert(`⚠️ BÀI NÓI PHẢI TỪ 60 GIÂY TRỞ LÊN!\n\nHiện tại: ${recordingDuration} giây\nCần thêm: ${60 - recordingDuration} giây`);
-    return;
-  }
-  
-  if (wordCount < 100) {
-    alert(`⚠️ BÀI NÓI PHẢI CÓ ÍT NHẤT 100 TỪ!\n\nHiện tại: ${wordCount} từ\nCần thêm: ${100 - wordCount} từ`);
-    return;
-  }
-  
-  // THÊM: DISABLE NÚT VÀ ĐÁNH DẤU ĐÃ SUBMIT
-  const submitBtn = document.getElementById('submitBtn');
-  submitBtn.disabled = true;
-  submitBtn.classList.add('opacity-50');
-  submitBtn.innerHTML = '<div class="spinner"></div> Đang gửi...';
-  isSubmitted = true;
-  
-  const duration = Math.round((Date.now() - startTime) / 1000);
-  const saveAudio = document.getElementById('saveAudio').checked;
-
-  let audioBase64 = '';
-  if (saveAudio && audioBlob) {
-    audioBase64 = await blobToBase64(audioBlob);
-  }
-
-  const dataToSend = {
-    action: 'submitSpeaking',
-    studentCode: student.code,
-    studentName: student.name,
-    targetLevel: student.target,
-    transcript,
-    question: currentQuestion,
-    duration,
-    audioBase64
-  };
-
-  console.log('📤 Gửi dữ liệu:', dataToSend);
-  document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>Đang gửi bài thi...</span></div>';
-
-  try {
-    // GỬI POST với no-cors
-    await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(dataToSend)
-    });
-    
-    console.log('✅ POST request đã gửi (no-cors mode)');
-
-    // ĐỢI 3 GIÂY cho Apps Script xử lý + gọi Groq AI
-    document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>AI đang chấm bài... (3s)</span></div>';
-    
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // LẤY KẾT QUẢ từ sheet qua GET
-    console.log('📥 Đang lấy kết quả từ sheet...');
-    document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>Đang lấy kết quả...</span></div>';
-    
-    const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLatestScore&code=${encodeURIComponent(student.code)}`);
-    const ai = await res.json();
-    
-    console.log('📊 Kết quả AI:', ai);
-
-    if (ai && ai.score) {
-      document.getElementById('result').innerHTML = `
-        <div class="bg-green-50 p-6 rounded-lg border-2 border-green-200 fade-in">
-          <h3 class="text-xl font-bold text-green-700 mb-3">🎯 Kết quả AI</h3>
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div class="bg-white p-3 rounded-lg">
-              <p class="text-sm text-gray-600">Điểm số</p>
-              <p class="text-2xl font-bold text-green-700">${ai.score}/10</p>
-            </div>
-            <div class="bg-white p-3 rounded-lg">
-              <p class="text-sm text-gray-600">Trình độ CEFR</p>
-              <p class="text-2xl font-bold text-indigo-700">${ai.cefrEquivalent || 'N/A'}</p>
-            </div>
-          </div>
-          <div class="bg-white p-4 rounded-lg">
-            <p class="font-semibold text-gray-700 mb-2">📝 Phản hồi chi tiết:</p>
-            <p class="text-gray-800">${ai.feedback || 'Chưa có phản hồi'}</p>
-          </div>
-          <button onclick="showLeaderboard()" class="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg">
-            Xem bảng xếp hạng 🏆
-          </button>
-        </div>
-      `;
-    } else {
-      document.getElementById('result').innerHTML = `
-        <div class="bg-yellow-50 p-6 rounded-lg border-2 border-yellow-300">
-          <h3 class="text-xl font-bold text-yellow-700 mb-2">⚠️ Chưa có kết quả</h3>
-          <p class="text-yellow-800">AI có thể đang xử lý. Vui lòng:</p>
-          <ul class="list-disc list-inside mt-2 text-yellow-800">
-            <li>Đợi thêm 5 giây và nhấn "Làm bài mới"</li>
-            <li>Kiểm tra bảng xếp hạng</li>
-            <li>Hoặc liên hệ giáo viên nếu lỗi lặp lại</li>
-          </ul>
-          <button onclick="showLeaderboard()" class="mt-4 w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg">
-            Kiểm tra bảng xếp hạng
-          </button>
-        </div>
-      `;
-    }
-  } catch (err) {
-    console.error('❌ Lỗi:', err);
-    document.getElementById('result').innerHTML = `
-      <div class="bg-red-50 p-6 rounded-lg border-2 border-red-200">
-        <h3 class="text-xl font-bold text-red-700 mb-2">❌ Lỗi kết nối</h3>
-        <p class="text-red-800 mb-2">${err.message}</p>
-        <p class="text-red-700 text-sm">Bài của bạn có thể đã được gửi. Kiểm tra bảng xếp hạng để chắc chắn.</p>
-        <button onclick="showLeaderboard()" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg">
-          Kiểm tra bảng xếp hạng
-        </button>
-      </div>
-    `;
-  }
-};
-
-function blobToBase64(blob) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result.split(',')[1]);
-    reader.readAsDataURL(blob);
-  });
-}
-
-// === LEADERBOARD ===
-async function showLeaderboard() {
-  document.getElementById('examScreen').classList.add('hidden');
-  document.getElementById('leaderboardScreen').classList.remove('hidden');
-  const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=leaderboard`);
-  const data = await res.json();
-  const tbody = document.getElementById('leaderboardBody');
-  tbody.innerHTML = data.length ? data.map((s, i) => `
-    <tr class="${i%2===0 ? 'bg-gray-50' : ''}">
-      <td class="p-3 font-bold text-green-700">${i+1}</td>
-      <td class="p-3">${s.name}</td>
-      <td class="p-3 text-center font-bold">${s.total.toFixed(1)}</td>
-      <td class="p-3 text-center">${s.count}</td>
-      <td class="p-3 text-center">${s.avg}</td>
-    </tr>
-  `).join('') : '<tr><td colspan="5" class="p-6 text-center text-gray-500">Chưa có dữ liệu</td></tr>';
-}
-
-function hideLeaderboard() {
-  document.getElementById('leaderboardScreen').classList.add('hidden');
-  document.getElementById('examScreen').classList.remove('hidden');
-}
-
-function restartExam() {
-  // THÊM: RESET TRẠNG THÁI SUBMIT
-  isSubmitted = false;
-  transcript = '';
-  recordingDuration = 0;
-  
-  loadQuestion();
-  document.getElementById('result').innerHTML = '';
-  document.getElementById('transcript').textContent = 'Nhấn "Bắt đầu ghi âm" để nói...';
-  document.getElementById('startBtn').disabled = false;
-  document.getElementById('submitBtn').disabled = true;
-  document.getElementById('submitBtn').classList.add('opacity-50');
-  document.getElementById('submitBtn').innerHTML = 'Gửi AI chấm';
-  resetTimer();
-}
-
-// === KHỞI ĐỘNG ===
-initApp();
-</script>
-</body>
-
 </html>
