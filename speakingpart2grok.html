@@ -270,7 +270,7 @@ function countWords(text) {
 
 // === CẬP NHẬT HIỂN THỊ TRANSCRIPT ===
 function updateTranscriptDisplay() {
-  const display = ('transcript');
+  const display = document.getElementById('transcript');
   const wordCount = countWords(transcript);
   
   if (transcript) {
@@ -435,67 +435,33 @@ document.getElementById('startBtn').onclick = () => {
   startTime = Date.now();
   startTimer();
 
-  let isRestarting = false; // Flag chống loop chặt
-  let recognitionError = null; // Lưu error để check
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-GB';
+  recognition.interimResults = true;
+  recognition.continuous = true; // ← FIX: false cho ổn định
 
-  function createRecognition() {
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-GB';
-    recognition.continuous = true; // Giữ continuous để thu liên tục
-    recognition.interimResults = true; // Hiển thị partial results
-    recognition.maxAlternatives = 1; // Giảm overhead
-
-    recognition.onresult = e => {
-      let interimTranscript = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const transcriptPiece = e.results[i][0].transcript;
-        if (e.results[i].isFinal) {
-          finalTranscript += transcriptPiece + ' ';
-        } else {
-          interimTranscript += transcriptPiece;
-        }
-      }
-      transcript = (finalTranscript + interimTranscript).trim();
-      updateTranscriptDisplay();
-    };
-
-    recognition.onerror = event => {
-      console.error('Speech error:', event.error);
-      recognitionError = event.error; // Lưu để check trong onend
-      if (event.error === 'no-speech') {
-        console.log('No speech detected - continuing...');
-        // Không stop, cứ để onend handle restart
-      } else if (['not-allowed', 'service-not-allowed'].includes(event.error)) {
-        alert('Quyền micro bị từ chối! Kiểm tra settings browser.');
-        stopRecording();
-      } else {
-        alert('Lỗi: ' + event.error + '. Thử lại.');
-        stopRecording();
-      }
-    };
-
-    recognition.onend = () => {
-      console.log('Recognition ended');
-      if (isRestarting || recognitionError && ['not-allowed', 'service-not-allowed'].includes(recognitionError)) {
-        return; // Không restart nếu đang loop hoặc permission error
-      }
-      if (recordingDuration < 60 && !isSubmitted) { // Còn thời gian và chưa submit
-        isRestarting = true;
-        setTimeout(() => {
-          recognitionError = null; // Reset error
-          createRecognition().start(); // Tạo mới và start
-          isRestarting = false;
-        }, 150); // Delay 150ms để tránh loop chặt
-      }
-    };
-
-    return recognition;
+recognition.onresult = e => {
+  let interimTranscript = '';
+  
+  for (let i = e.resultIndex; i < e.results.length; i++) {
+    const transcriptPiece = e.results[i][0].transcript;
+    if (e.results[i].isFinal) {
+      finalTranscript += transcriptPiece + ' ';
+    } else {
+      interimTranscript += transcriptPiece;
+    }
   }
-
-  const recognition = createRecognition();
+  
+  transcript = (finalTranscript + interimTranscript).trim();
+  updateTranscriptDisplay();
+};
+  
+  recognition.onend = () => {
+  console.log('Recognition ended');
+};
+  
   recognition.start();
 
-  // MediaRecorder giữ nguyên để record audio
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
     const chunks = [];
@@ -506,24 +472,22 @@ document.getElementById('startBtn').onclick = () => {
       document.getElementById('submitBtn').classList.remove('opacity-50');
     };
     mediaRecorder.start();
-  }).catch(err => {
-    alert('Cần quyền micro! ' + err.message);
-    stopRecording();
+  }).catch(() => {
+    alert('Cần cấp quyền micro!');
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+    clearInterval(timerInterval);
   });
 };
 
-function stopRecording() {
-  // Stop recognition và mediaRecorder
-  if (recognition) recognition.stop();
-  if (mediaRecorder) mediaRecorder.stop();
+document.getElementById('stopBtn').onclick = () => {
+  recognition?.stop();
+  mediaRecorder?.stop();
   clearInterval(timerInterval);
-  document.getElementById('startBtn').disabled = false;
   document.getElementById('stopBtn').disabled = true;
   document.getElementById('stopBtn').classList.add('opacity-50');
   updateTranscriptDisplay();
-}
-
-// Trong stopBtn.onclick: Gọi stopRecording();
+};
 
 // === GỬI + LẤY KẾT QUẢ ===
 document.getElementById('submitBtn').onclick = async () => {
@@ -707,5 +671,4 @@ finalTranscript = '';
 initApp();
 </script>
 </body>
-
 </html>
