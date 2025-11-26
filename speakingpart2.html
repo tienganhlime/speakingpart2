@@ -125,17 +125,15 @@
   </div>
 </div>
 
-
 <script>
-// === TẤT CẢ CODE GIỮ NGUYÊN, CHỈ THAY 2 ĐOẠN DƯỚI ĐÂY ===
-
+// === CẤU HÌNH ===
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyYlENWgtwewFblT0mdbrK-TuN8S1QEI0y_MgoqAmNy6okRTHLbmV8gIjgIFHJdaSGlrg/exec';
 
-let student = {}, recognition = null, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
+let student = {}, recognition, mediaRecorder, audioBlob, transcript = '', currentQuestion = '', startTime, timerInterval, timeLeft = 60;
 let recordingDuration = 0;
 let isSubmitted = false;
 
-// === 25 CẶP ẢNH (dùng Pexels - ổn định hơn Unsplash) ===
+// === 25 CẶP ẢNH ===
 const questions = [
   {
     img1: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400&h=300",
@@ -263,12 +261,13 @@ const questions = [
     question: "Compare the two pictures and say how the people might be feeling about their achievements."
   }
 ];
-// === THÊM: HÀM ĐẾM SỐ TỪ ===
+
+// === HÀM ĐẾM SỐ TỪ ===
 function countWords(text) {
   return text.trim().split(/\s+/).filter(word => word.length > 0).length;
 }
 
-// === THÊM: HÀM CẬP NHẬT HIỂN THỊ TRANSCRIPT VỚI THỐNG KÊ ===
+// === CẬP NHẬT HIỂN THỊ TRANSCRIPT ===
 function updateTranscriptDisplay() {
   const display = document.getElementById('transcript');
   const wordCount = countWords(transcript);
@@ -300,14 +299,12 @@ function updateTranscriptDisplay() {
 
 // === KHỞI ĐỘNG ===
 function initApp() {
-  console.log('🚀 initApp() được gọi');
   localStorage.removeItem('speakingStudent');
   student = {};
   showLogin();
 }
 
 function showLogin() {
-  console.log('🔐 Hiển thị màn hình login');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('examScreen').classList.add('hidden');
   document.getElementById('leaderboardScreen').classList.add('hidden');
@@ -316,9 +313,6 @@ function showLogin() {
 }
 
 function showExam() {
-  console.log('📚 Hiển thị màn hình thi');
-  console.log('Student hiện tại:', student);
-  
   document.getElementById('loginScreen').classList.add('hidden');
   document.getElementById('examScreen').classList.remove('hidden');
   document.getElementById('leaderboardScreen').classList.add('hidden');
@@ -343,7 +337,6 @@ async function verifyStudent() {
   }
   
   code = code.trim().toUpperCase();
-  console.log('🔍 Đang xác thực mã:', code);
   
   const btn = document.querySelector('#loginScreen button');
   const originalText = btn.innerHTML;
@@ -352,8 +345,6 @@ async function verifyStudent() {
 
   try {
     const url = `${GOOGLE_SCRIPT_URL}?action=verifySpeaking&code=${encodeURIComponent(code)}`;
-    console.log('📡 Gọi API:', url);
-    
     const res = await fetch(url);
     
     if (!res.ok) {
@@ -361,7 +352,6 @@ async function verifyStudent() {
     }
     
     const data = await res.json();
-    console.log('✅ API trả về:', data);
     
     if (data.exists) {
       student = { 
@@ -369,7 +359,6 @@ async function verifyStudent() {
         name: data.name, 
         target: data.target || 'B1' 
       };
-      console.log('💾 Lưu student:', student);
       localStorage.setItem('speakingStudent', JSON.stringify(student));
       
       btn.innerHTML = '✓ Thành công!';
@@ -381,7 +370,7 @@ async function verifyStudent() {
     }
   } catch (err) {
     console.error('❌ Lỗi:', err);
-    alert(`Lỗi kết nối!\n\n${err.message}\n\nVui lòng:\n• Kiểm tra Internet\n• Thử lại sau\n• Liên hệ admin nếu lỗi liên tục`);
+    alert(`Lỗi kết nối!\n\n${err.message}\n\nVui lòng kiểm tra Internet và thử lại.`);
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalText;
@@ -389,7 +378,6 @@ async function verifyStudent() {
 }
 
 function logout() { 
-  console.log('👋 Đăng xuất');
   localStorage.removeItem('speakingStudent'); 
   student = {};
   location.reload(); 
@@ -399,8 +387,8 @@ function logout() {
 function loadQuestion() {
   const q = questions[Math.floor(Math.random() * questions.length)];
   document.getElementById('images').innerHTML = `
-    <img src="${q.img1}" alt="1" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
-    <img src="${q.img2}" alt="2" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'; this.classList.add('placeholder-img')">
+    <img src="${q.img1}" alt="1" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'">
+    <img src="${q.img2}" alt="2" onerror="this.src='https://via.placeholder.com/400x300?text=Image+Not+Found'">
   `;
   document.getElementById('question').textContent = q.question;
   currentQuestion = q.question;
@@ -413,10 +401,10 @@ function startTimer() {
   document.getElementById('timer').className = 'timer text-green-600';
   timerInterval = setInterval(() => {
     timeLeft--;
-    recordingDuration++; // THÊM: Tăng thời gian ghi âm
+    recordingDuration++;
     const display = `00:${timeLeft.toString().padStart(2, '0')}`;
     document.getElementById('timer').textContent = display;
-    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị real-time
+    updateTranscriptDisplay();
     if (timeLeft <= 0) {
       document.getElementById('timer').textContent = '00:00';
       document.getElementById('timer').className = 'timer text-red-600 font-bold';
@@ -425,165 +413,83 @@ function startTimer() {
     }
   }, 1000);
 }
+
 function resetTimer() { 
   clearInterval(timerInterval); 
-  recordingDuration = 0; // THÊM: Reset thời gian ghi âm
+  recordingDuration = 0;
   document.getElementById('timer').textContent = '01:00'; 
   document.getElementById('timer').className = 'timer text-green-600'; 
 }
 
-// ==== THAY TOÀN BỘ HÀM NÀY (đoạn khởi động Speech Recognition) ====
-let isRecognizing = false; // BIẾN QUAN TRỌNG: chống gọi start() 2 lần
-
-function startSpeechRecognition() {
-  return new Promise((resolve, reject) => {
-    if (isRecognizing) {
-      resolve();
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      return reject('unsupported');
-    }
-
-    recognition = new SpeechRecognition();
-    recognition.lang = 'en-GB';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onstart = () => {
-      isRecognizing = true;
-      console.log('Speech recognition started');
-    };
-
-    recognition.onresult = (event) => {
-      let finalTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript + ' ';
-        }
-      }
-
-      if (finalTranscript) {
-        transcript += finalTranscript;
-        updateTranscriptDisplay();
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.warn('Speech error:', event.error);
-      isRecognizing = false;
-
-      // Chỉ retry với lỗi tạm thời
-      if (event.error === 'no-speech' || event.error === 'audio-capture') {
-        setTimeout(() => !document.getElementById('stopBtn').disabled && recognition.start(), 500);
-      } else if (event.error === 'not-allowed') {
-        reject('microphone');
-      }
-    };
-
-    recognition.onend = () => {
-      isRecognizing = false;
-      // Chỉ tự động restart nếu người dùng chưa bấm DỪNG
-      if (!document.getElementById('stopBtn').disabled) {
-        setTimeout(() => recognition.start(), 100);
-      }
-    };
-
-    recognition.start();
-    resolve();
-  });
-}
-// ==== THAY ĐOẠN NÀY: Nút "Bắt đầu ghi âm" ====
-document.getElementById('startBtn').onclick = async () => {
-  if (isRecognizing || (recognition && isRecognizing)) {
-    return; // Đang chạy rồi, không làm gì
-  }
-
+// === GHI ÂM - VERSION FIXED ===
+document.getElementById('startBtn').onclick = () => {
   transcript = '';
   recordingDuration = 0;
-  document.getElementById('transcript').textContent = 'Đang khởi động nhận diện giọng nói...';
+  document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('startBtn').textContent = 'Đang khởi động...';
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('stopBtn').classList.remove('opacity-50');
+  document.getElementById('submitBtn').disabled = true;
+  startTime = Date.now();
+  startTimer();
 
-  try {
-    await startSpeechRecognition();
-
-    document.getElementById('transcript').textContent = 'Đang nghe... Nói tiếng Anh đi nào!';
-    document.getElementById('stopBtn').disabled = false;
-    document.getElementById('stopBtn').classList.remove('opacity-50');
-    document.getElementById('submitBtn').disabled = true;
-    startTimer();
-
-    // MediaRecorder (giữ nguyên)
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      mediaRecorder = new MediaRecorder(stream);
-      const chunks = [];
-      mediaRecorder.ondataavailable = e => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        document.getElementById('submitBtn').disabled = false;
-        document.getElementById('submitBtn').classList.remove('opacity-50');
-      };
-      mediaRecorder.start();
-    }).catch(() => {
-      alert('Cần cấp quyền micro!');
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('startBtn').textContent = 'Bắt đầu ghi âm';
-    });
-
-  } catch (err) {
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('startBtn').textContent = 'Bắt đầu ghi âm';
-    isRecognizing = false;
-
-    if (err === 'microphone') {
-      alert('Bạn chưa cho phép dùng micro! Vui lòng cấp quyền.');
-    } else {
-      document.getElementById('transcript').innerHTML = `
-        <div class="bg-orange-50 border border-orange-300 rounded-lg p-4 text-orange-800">
-          <strong>Trình duyệt chưa hỗ trợ tốt nhận diện giọng nói</strong><br><br>
-          Khuyên dùng: <strong>Google Chrome</strong> (máy tính hoặc điện thoại)<br>
-          Bạn vẫn có thể nói – app cố gắng nhận diện nhé!
-        </div>
-      `;
+  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-GB';
+  recognition.interimResults = true;
+  recognition.continuous = false; // ← FIX: false cho ổn định
+  
+  recognition.onresult = e => {
+    transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
+    updateTranscriptDisplay();
+  };
+  
+  // ← FIX: Auto-restart để giống continuous
+  recognition.onend = () => {
+    if (!document.getElementById('stopBtn').disabled) {
+      setTimeout(() => {
+        try { recognition.start(); } catch(e) { console.log('Restart:', e); }
+      }, 100);
     }
-  }
+  };
+  
+  recognition.start();
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    mediaRecorder = new MediaRecorder(stream);
+    const chunks = [];
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      audioBlob = new Blob(chunks, { type: 'audio/webm' });
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').classList.remove('opacity-50');
+    };
+    mediaRecorder.start();
+  }).catch(() => {
+    alert('Cần cấp quyền micro!');
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('stopBtn').disabled = true;
+    clearInterval(timerInterval);
+  });
 };
 
-// ==== VÀ ĐOẠN DỪNG CŨNG SỬA CHO CHẮC ====
 document.getElementById('stopBtn').onclick = () => {
-  if (recognition) {
-    recognition.stop();
-    recognition = null;
-  }
-  if (mediaRecorder) mediaRecorder.stop();
+  recognition?.stop();
+  mediaRecorder?.stop();
   clearInterval(timerInterval);
-  isRecognizing = false;
-
   document.getElementById('stopBtn').disabled = true;
   document.getElementById('stopBtn').classList.add('opacity-50');
-  document.getElementById('submitBtn').disabled = false;
-  document.getElementById('submitBtn').classList.remove('opacity-50');
   updateTranscriptDisplay();
 };
 
-// === TẤT CẢ CÁC HÀM KHÁC (verifyStudent, submitBtn, leaderboard, v.v.) GIỮ NGUYÊN 100% ===
-// Bạn chỉ cần copy-paste từ file cũ vào đây
-
-// (Dán hết code cũ của bạn từ initApp() trở xuống vào đây, chỉ thay 2 đoạn trên)
 // === GỬI + LẤY KẾT QUẢ ===
 document.getElementById('submitBtn').onclick = async () => {
-  // THÊM: KIỂM TRA ĐÃ SUBMIT CHƯA
+  // KIỂM TRA ĐÃ SUBMIT CHƯA
   if (isSubmitted) {
     alert('⚠️ Bạn đã gửi bài rồi! Không thể gửi lại.\n\nNhấn "Làm bài mới" để làm bài khác.');
     return;
   }
   
-  // THÊM: KIỂM TRA ĐIỀU KIỆN 60s + 100 TỪ
+  // KIỂM TRA ĐIỀU KIỆN 60s + 100 TỪ
   const wordCount = countWords(transcript);
   
   if (recordingDuration < 60) {
@@ -596,7 +502,7 @@ document.getElementById('submitBtn').onclick = async () => {
     return;
   }
   
-  // THÊM: DISABLE NÚT VÀ ĐÁNH DẤU ĐÃ SUBMIT
+  // DISABLE NÚT VÀ ĐÁNH DẤU ĐÃ SUBMIT
   const submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
   submitBtn.classList.add('opacity-50');
@@ -636,15 +542,15 @@ document.getElementById('submitBtn').onclick = async () => {
       body: JSON.stringify(dataToSend)
     });
     
-    console.log('✅ POST request đã gửi (no-cors mode)');
+    console.log('✅ POST request đã gửi');
 
-    // ĐỢI 3 GIÂY cho Apps Script xử lý + gọi Groq AI
+    // ĐỢI 3 GIÂY cho Apps Script xử lý + gọi AI
     document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>AI đang chấm bài... (3s)</span></div>';
     
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // LẤY KẾT QUẢ từ sheet qua GET
-    console.log('📥 Đang lấy kết quả từ sheet...');
+    // LẤY KẾT QUẢ từ sheet
+    console.log('📥 Đang lấy kết quả...');
     document.getElementById('result').innerHTML = '<div class="flex items-center gap-2"><div class="spinner"></div><span>Đang lấy kết quả...</span></div>';
     
     const res = await fetch(`${GOOGLE_SCRIPT_URL}?action=getLatestScore&code=${encodeURIComponent(student.code)}`);
@@ -681,8 +587,7 @@ document.getElementById('submitBtn').onclick = async () => {
           <h3 class="text-xl font-bold text-yellow-700 mb-2">⚠️ Chưa có kết quả</h3>
           <p class="text-yellow-800">AI có thể đang xử lý. Vui lòng:</p>
           <ul class="list-disc list-inside mt-2 text-yellow-800">
-            <li>Đợi thêm 5 giây và nhấn "Làm bài mới"</li>
-            <li>Kiểm tra bảng xếp hạng</li>
+            <li>Đợi thêm 5 giây và kiểm tra bảng xếp hạng</li>
             <li>Hoặc liên hệ giáo viên nếu lỗi lặp lại</li>
           </ul>
           <button onclick="showLeaderboard()" class="mt-4 w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg">
@@ -738,7 +643,7 @@ function hideLeaderboard() {
 }
 
 function restartExam() {
-  // THÊM: RESET TRẠNG THÁI SUBMIT
+  // RESET TRẠNG THÁI
   isSubmitted = false;
   transcript = '';
   recordingDuration = 0;
