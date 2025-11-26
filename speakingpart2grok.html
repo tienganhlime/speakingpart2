@@ -496,7 +496,24 @@ document.getElementById('startBtn').onclick = async () => {
     };
     
     recognition.start();
+recognition.onaudiostart = () => {
+  console.log('✅ Microphone đang hoạt động');
+  document.getElementById('transcript').textContent = '✅ Micro hoạt động - Hãy nói!';
+};
 
+recognition.onaudioend = () => {
+  console.log('⚠️ Microphone ngừng nhận âm thanh');
+};
+
+recognition.onspeechstart = () => {
+  console.log('🎤 Phát hiện giọng nói!');
+};
+
+recognition.onspeechend = () => {
+  console.log('🔇 Giọng nói kết thúc');
+};
+
+navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     // GHI ÂM
     mediaRecorder = new MediaRecorder(stream);
     const chunks = [];
@@ -710,5 +727,6 @@ initApp();
 </script>
 </body>
 </html>
+
 
 
