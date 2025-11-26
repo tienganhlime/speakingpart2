@@ -432,10 +432,18 @@ function resetTimer() {
 }
 
 // === GHI ÂM ===
-document.getElementById('startBtn').onclick = () => {
+// === GHI ÂM ===
+document.getElementById('startBtn').onclick = async () => {
+  // KIỂM TRA HỖ TRỢ
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert('❌ Trình duyệt này KHÔNG hỗ trợ Speech Recognition!\n\nVui lòng dùng Chrome hoặc Safari.');
+    return;
+  }
+  
   transcript = '';
-  recordingDuration = 0; // THÊM: Reset thời gian
-  document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
+  recordingDuration = 0;
+  document.getElementById('transcript').textContent = 'Đang khởi động...';
   document.getElementById('startBtn').disabled = true;
   document.getElementById('stopBtn').disabled = false;
   document.getElementById('stopBtn').classList.remove('opacity-50');
@@ -443,24 +451,46 @@ document.getElementById('startBtn').onclick = () => {
   startTime = Date.now();
   startTimer();
 
-  recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'en-GB';
-  recognition.interimResults = true;
-  recognition.continuous = false;
-  recognition.onresult = e => {
-    transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị với số từ
-  };
-  recognition.onend = () => {
-  if (!document.getElementById('stopBtn').disabled) {
-    setTimeout(() => {
-      try { recognition.start(); } catch(e) {}
-    }, 300);
-  }
-};
-  recognition.start();
+  try {
+    // XIN QUYỀN MICRO TRƯỚC
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // SAU ĐÓ MỚI BẬT RECOGNITION
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    
+    recognition.onstart = () => {
+      console.log('✅ Recognition started');
+      document.getElementById('transcript').textContent = 'Đang nghe... (Nói tiếng Anh!)';
+    };
+    
+    recognition.onresult = e => {
+      transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
+      updateTranscriptDisplay();
+    };
+    
+    recognition.onerror = (e) => {
+      console.error('❌ Error:', e.error);
+      if (e.error === 'no-speech') {
+        // Bỏ qua lỗi không có tiếng nói
+      } else {
+        alert('Lỗi: ' + e.error);
+      }
+    };
+    
+    recognition.onend = () => {
+      if (!document.getElementById('stopBtn').disabled) {
+        setTimeout(() => {
+          try { recognition.start(); } catch(e) {}
+        }, 300);
+      }
+    };
+    
+    recognition.start();
 
-  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    // GHI ÂM
     mediaRecorder = new MediaRecorder(stream);
     const chunks = [];
     mediaRecorder.ondataavailable = e => chunks.push(e.data);
@@ -470,10 +500,13 @@ document.getElementById('startBtn').onclick = () => {
       document.getElementById('submitBtn').classList.remove('opacity-50');
     };
     mediaRecorder.start();
-  }).catch(() => {
-    alert('Cần cấp quyền micro!');
+    
+  } catch(err) {
+    alert('Không truy cập được micro: ' + err.message);
     document.getElementById('startBtn').disabled = false;
-  });
+    document.getElementById('stopBtn').disabled = true;
+    clearInterval(timerInterval);
+  }
 };
 
 document.getElementById('stopBtn').onclick = () => {
@@ -670,3 +703,4 @@ initApp();
 </script>
 </body>
 </html>
+
