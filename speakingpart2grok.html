@@ -444,32 +444,20 @@ document.getElementById('startBtn').onclick = () => {
   startTimer();
 
   recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = 'en-US';  // Đổi thành en-US cho mobile tốt hơn
+  recognition.lang = 'en-GB';
   recognition.interimResults = true;
-  recognition.continuous = true;  // Giữ nguyên continuous=true
-
+  recognition.continuous = false;
   recognition.onresult = e => {
     transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
-    updateTranscriptDisplay(); // Cập nhật hiển thị với số từ
+    updateTranscriptDisplay(); // THÊM: Cập nhật hiển thị với số từ
   };
-
-  // THÊM: Handler onend để restart trên mobile
   recognition.onend = () => {
-    console.log('🔄 Recognition ended, restarting...');
-    if (document.getElementById('startBtn').disabled) {  // Chỉ restart nếu đang ghi âm
-      recognition.start();
-    }
-  };
-
-  // THÊM: Xử lý lỗi cơ bản
-  recognition.onerror = (event) => {
-    console.error('❌ Speech Error:', event.error);
-    if (event.error === 'no-speech' || event.error === 'network') {
-      // Auto restart cho lỗi phổ biến trên mobile
-      setTimeout(() => recognition.start(), 500);
-    }
-  };
-
+  if (!document.getElementById('stopBtn').disabled) {
+    setTimeout(() => {
+      try { recognition.start(); } catch(e) {}
+    }, 300);
+  }
+};
   recognition.start();
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
